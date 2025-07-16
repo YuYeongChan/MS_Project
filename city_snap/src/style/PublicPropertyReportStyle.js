@@ -1,0 +1,127 @@
+import { StyleSheet } from 'react-native';
+
+const shadow = {
+  shadowColor: 'black',
+  shadowOffset: { width: 10, height: 10 },
+  shadowOpacity: 0.8,
+  shadowRadius: 20,
+  elevation: 10,
+};
+
+export const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#7145C9",
+    paddingTop: 70,
+    paddingLeft: 25,
+    paddingRight: 25,
+  },
+  title: {
+    fontSize: 24,
+    color: "white",
+    fontWeight: "bold",
+    marginBottom: 25,
+  },
+  subtitle: {
+    fontSize: 17,
+    color: "white",
+    fontWeight: "bold",
+    marginBottom: 15,
+  },
+  photoBox: {
+    backgroundColor: "#FFFFFF",
+    height: 180,
+    borderRadius: 35,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    ...shadow,
+  },
+  plusIcon: {
+    fontSize: 40,
+    fontWeight: "bold",
+    color: "black",
+  },
+  photo: {
+    width: "90%",
+    height: "80%",
+    borderRadius: 20,
+    resizeMode: 'cover',
+  },
+  input: {
+    backgroundColor: "#ddd",
+    borderRadius: 10,
+    height: 50,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    color: "#000",
+  },
+  submitButton: {
+    backgroundColor: "#945EE2",
+    borderRadius: 20,
+    paddingVertical: 14,
+    alignItems: "center",
+    ...shadow,
+  },
+  chooseButton: {
+    backgroundColor: "#945EE2",
+    borderRadius: 20,
+    paddingVertical: 16,
+    alignItems: "flex-start",
+    paddingLeft: 15,
+    marginBottom: 20,
+    ...shadow,
+  },
+  submitText: {
+    fontSize: 17,
+    color: "white",
+    fontWeight: "bold",
+  },
+  viewStyle: {
+    backgroundColor: "#945EE2",
+    borderRadius: 20,
+    height: 200,
+    marginBottom: 20,
+    padding: 20,
+    paddingTop: 20,
+    ...shadow,
+  },
+  viewTitle: {
+    fontSize: 17,
+    color: "white",
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  textArea: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 15,
+    height: 130,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 15,
+    color: "#000",
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    maxHeight: '100%',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 12,
+    elevation: 10,
+    height: '70%',
+  },
+  modalButton: {
+    backgroundColor: "#2296F3",
+    borderRadius: 20,
+    marginTop: 10,
+    height: 35,
+    alignItems: 'center',
+    paddingVertical: 4,
+    ...shadow,
+  }
+});
