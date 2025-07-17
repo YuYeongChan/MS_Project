@@ -37,7 +37,6 @@ const PublicPropertyReportScreen = () => {
     const [location, setLocation] = useState(null);
 
     const handleLocation = (coords) => {
-        console.log(coords.lat, coords.lng)
         setLocation(coords);
     };
 
