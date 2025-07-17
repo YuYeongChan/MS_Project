@@ -55,10 +55,10 @@ function MainScreen() {
 
                     <TouchableOpacity
                         style={main_styles.icon}
-                        // onPress={() =>
-                        //     navigation.navigate("AccountScreen")
-                        // }
-                        onPress={() => {alert("내 정보 조회")}}
+                        onPress={() =>
+                            navigation.navigate("AccountScreen")
+                        }
+                        // onPress={() => {alert("내 정보 조회")}}
                     >
                         <Text style={main_styles.iconText}>내 정보</Text>
                     </TouchableOpacity>
