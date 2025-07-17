@@ -12,11 +12,16 @@ import {
 import KakaoMapPicker from "./sub_contents/KaKaoMapPicker";
 import { styles } from "../style/PublicPropertyReportStyle";
 
+import ChooseDate from "./sub_contents/ChooseDate";
+
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
     const [detail, setDetail] = useState("");
     const [visible, setVisible] = useState(false);
+
+    const [date, setDate] = useState(null);
+    const [modalType, setModalType] = useState(null);
     
     const pickPhoto = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
@@ -57,7 +62,10 @@ const PublicPropertyReportScreen = () => {
             {/* 공공기물 위치 */}
             <TouchableOpacity
                 style={styles.chooseButton}
-                onPress={() => setVisible(true)}
+                onPress={() => {
+                    setModalType("map");
+                    setVisible(true);
+                }}
             >
                 <Text style={styles.submitText}>공공기물 위치</Text>
             </TouchableOpacity>
@@ -65,9 +73,14 @@ const PublicPropertyReportScreen = () => {
             {/* 날짜 */}
             <TouchableOpacity
                 style={styles.chooseButton}
-                onPress={() => alert("날짜")}
+                onPress={() => {
+                    setModalType("date");
+                    setVisible(true);
+                }}
             >
-                <Text style={styles.submitText}>날짜</Text>
+                <Text style={styles.submitText}>
+                    {date || "날짜 선택"}
+                </Text>
             </TouchableOpacity>
 
             {/* 파손 내용 */}
@@ -106,13 +119,28 @@ const PublicPropertyReportScreen = () => {
             >
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
-                        <KakaoMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
-                        <TouchableOpacity
-                            style={styles.modalButton}
-                            onPress={() => setVisible(false)}
-                        >
-                            <Text style={styles.submitText}>위치 선택</Text>
-                        </TouchableOpacity>
+                        {modalType === "map" && (
+                            <>
+                                <KakaoMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
+                                <TouchableOpacity
+                                    style={styles.modalButton}
+                                    onPress={() => setVisible(false)}
+                                >
+                                    <Text style={styles.submitText}>위치 선택</Text>
+                                </TouchableOpacity>
+                            </>
+                        )}
+
+                        {modalType === "date" && (
+                            <>
+                                <ChooseDate
+                                    onSelect={(selectedDate) => {
+                                        setDate(selectedDate);
+                                        setVisible(false);
+                                    }}
+                                />
+                            </>
+                        )}
                     </View>
                 </View>
             </Modal>
