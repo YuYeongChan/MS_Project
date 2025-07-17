@@ -6,89 +6,132 @@ import {
     TouchableOpacity,
     View,
     StyleSheet,
-    ScrollView, // 내용이 길어질 수 있으므로 ScrollView 추가
-    Platform, // 전화번호 입력 시 키보드 타입 변경 위함
+    ScrollView,
+    Platform,
 } from "react-native";
 
-// --- 중요: Python FastAPI 서버의 기본 URL 설정 ---
-// const API_BASE_URL = 'http://YOUR_PYTHON_SERVER_IP:8000'; 
 const API_BASE_URL = 'http://195.168.9.69:1234'; 
-// 예: 'http://192.168.1.100:1234' (FastAPI가 1234 포트에서 실행 중일 경우)
-
 
 const SignUpScreen = ({ navigation }) => {
-    // Users 테이블 스키마에 맞춰 상태 변수 추가/조정
     const [userId, setUserId] = useState("");
     const [password, setPassword] = useState("");
-    // const [profilePicUrl, setProfilePicUrl] = useState(""); // 프로필 사진은 보통 파일 업로드로 처리되므로, 필요시 활성화
     const [nickname, setNickname] = useState("");
     const [name, setName] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState(""); // phone_number 필드 추가
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
     const [residentIdNumber, setResidentIdNumber] = useState("");
-    // score 필드는 서버에서 기본값 처리하거나 앱 로직에서 관리하므로 클라이언트에서 직접 입력받지 않음
 
     const [isLoading, setIsLoading] = useState(false);
+    const [isNicknameChecking, setIsNicknameChecking] = useState(false); // 닉네임 중복 검사 중 상태
+    const [isNicknameAvailable, setIsNicknameAvailable] = useState(null); // 닉네임 사용 가능 여부 (true/false/null)
+
+
+    // --- 닉네임 변경 핸들러 (중복 상태 초기화) ---
+    const handleChangeNickname = (text) => {
+        setNickname(text);
+        setIsNicknameAvailable(null); // 닉네임이 변경되면 중복 상태를 초기화
+    };
+
+    // --- 닉네임 중복 확인 함수 ---
+    const checkNicknameAvailability = async () => {
+        if (!nickname.trim()) {
+            setIsNicknameAvailable(null); // 비어있으면 초기화
+            return;
+        }
+
+        setIsNicknameChecking(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/account.check.nickname?nickname=${nickname}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+
+            if (response.ok) { // HTTP 200 OK
+                setIsNicknameAvailable(true);
+                Alert.alert("알림", "사용 가능한 닉네임입니다.");
+            } else if (response.status === 409) { // HTTP 409 Conflict
+                setIsNicknameAvailable(false);
+                Alert.alert("알림", "이미 사용 중인 닉네임입니다. 다른 닉네임을 입력해주세요.");
+            } else {
+                // 다른 오류 (예: 500 Internal Server Error)
+                const errorData = await response.json();
+                console.error("닉네임 중복 확인 서버 오류:", errorData);
+                setIsNicknameAvailable(null); // 오류 발생 시 불확실 상태
+                Alert.alert("오류", errorData.detail || "닉네임 중복 확인 중 오류가 발생했습니다.");
+            }
+        } catch (error) {
+            console.error("네트워크 오류:", error);
+            setIsNicknameAvailable(null); // 네트워크 오류 시 불확실 상태
+            Alert.alert("오류", "닉네임 중복 확인 중 네트워크 오류가 발생했습니다.");
+        } finally {
+            setIsNicknameChecking(false);
+        }
+    };
+
 
     const handleSignUp = async () => {
-        // 1. 입력 필드 유효성 검사 (필수 필드 확인)
-        // Users 테이블의 NOT NULL 필드: user_no, user_id, password, nickname, name, resident_id_number
-        if (!userId.trim() || !password.trim() || !nickname.trim() || 
-            !name.trim() || !residentIdNumber.trim()) {
-            Alert.alert("알림", "필수 입력 필드(사용자 ID, 비밀번호, 닉네임, 이름, 주민등록번호)를 모두 입력해주세요.");
+        // 1. 필수 입력 필드 유효성 검사
+        if (!userId.trim()) { Alert.alert("알림", "사용자 ID를 입력해주세요."); return; }
+        if (!password.trim()) { Alert.alert("알림", "비밀번호를 입력해주세요."); return; }
+        if (!nickname.trim()) { Alert.alert("알림", "닉네임을 입력해주세요."); return; }
+        if (!name.trim()) { Alert.alert("알림", "이름을 입력해주세요."); return; }
+        if (!residentIdNumber.trim()) { Alert.alert("알림", "주민등록번호를 입력해주세요."); return; }
+
+        // --- 2. 특정 필드 형식 유효성 검사 ---
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(userId)) { Alert.alert("알림", "유효한 사용자 ID(이메일 형식)를 입력해주세요."); return; }
+        const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+        if (!passwordRegex.test(password)) { Alert.alert("알림", "비밀번호는 최소 8자 이상, 영문, 숫자, 특수문자를 포함해야 합니다."); return; }
+        const rrnRegex = /^\d{6}[-]\d{7}$/;
+        if (!rrnRegex.test(residentIdNumber)) { Alert.alert("알림", "주민등록번호는 'YYMMDD-XXXXXXX' 형식으로 입력해주세요."); return; }
+        const phoneRegex = /^01(?:0|1|[6-9])(?:\-|\s)?(?:\d{3}|\d{4})(?:\-|\s)?\d{4}$/;
+        if (phoneNumber.trim() && !phoneRegex.test(phoneNumber)) { Alert.alert("알림", "유효한 전화번호 형식(예: 010-1234-5678)을 입력해주세요."); return; }
+
+        // --- 3. 닉네임 중복 검사 확인 ---
+        if (isNicknameAvailable === null || !isNicknameAvailable) {
+            Alert.alert("알림", "닉네임 중복 확인을 완료하고 사용 가능한 닉네임을 입력해주세요.");
             return;
         }
 
         setIsLoading(true);
 
-        // 2. FormData 객체 생성
         const formData = new FormData();
-        // FastAPI 백엔드의 account.sign.up 함수 파라미터 이름과 일치해야 합니다.
-        // homeController.py의 accountSignUp 함수 정의를 다시 확인하세요:
-        // user_id, password, nickname, name, address, resident_id_number
-        // (phone_number는 현재 FastAPI 엔드포인트에 없음. 필요시 백엔드도 수정해야 함)
-        
         formData.append('user_id', userId);
         formData.append('password', password);
-        // if (profilePicUrl) formData.append('profile_pic_url', profilePicUrl); // 프로필 사진 URL 필드
         formData.append('nickname', nickname);
         formData.append('name', name);
-        formData.append('address', address); // null 허용 필드이므로 빈 문자열도 가능
+        formData.append('address', address); 
         formData.append('resident_id_number', residentIdNumber);
-        // phone_number도 백엔드에서 받으려면 formData에 추가하고 FastAPI 엔드포인트 수정 필요
-        // if (phoneNumber) formData.append('phone_number', phoneNumber); 
-
+        if (phoneNumber.trim()) {
+            formData.append('phone_number', phoneNumber); 
+        }
 
         try {
-            // 3. FastAPI 서버로 HTTP POST 요청 보내기
             const response = await fetch(`${API_BASE_URL}/account.sign.up`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
-                    // FormData 사용 시 'Content-Type': 'multipart/form-data'는 fetch가 자동으로 설정
                 },
                 body: formData,
             });
 
             const responseData = await response.json();
 
-            if (response.ok) { // HTTP 상태 코드가 2xx (성공)인 경우
+            if (response.ok) {
                 Alert.alert("회원가입 성공", responseData.result || "회원가입에 성공했습니다!");
                 console.log("회원가입 성공 데이터:", responseData);
-                
-                // 회원가입 성공 후 로그인 화면으로 돌아가기
                 navigation.goBack(); 
-
             } else {
                 console.error("회원가입 서버 응답 오류 (상태 코드:", response.status, "):", responseData);
-                // 서버에서 보낸 에러 메시지를 사용자에게 표시
                 Alert.alert("회원가입 실패", responseData.error || responseData.result || "회원가입에 실패했습니다. 다시 시도해주세요.");
             }
         } catch (error) {
             console.error("네트워크 요청 실패:", error);
             Alert.alert("오류", "서버와 통신하는 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.");
         } finally {
-            setIsLoading(false); // 로딩 종료
+            setIsLoading(false);
         }
     };
 
@@ -99,38 +142,52 @@ const SignUpScreen = ({ navigation }) => {
 
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="사용자 ID /email"
+                    placeholder="사용자 ID (이메일 형식)"
                     placeholderTextColor="#999"
                     value={userId}
                     onChangeText={setUserId}
-                    autoCapitalize="none" // 대문자 자동 변환 방지
-                    keyboardType="email-address" // ID가 이메일 형식일 경우 유용
+                    autoCapitalize="none"
+                    keyboardType="email-address"
                 />
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="비밀번호"
+                    placeholder="비밀번호 (영문, 숫자, 특수문자 포함 8자 이상)"
                     placeholderTextColor="#999"
                     value={password}
                     onChangeText={setPassword}
-                    secureTextEntry // 비밀번호 숨김
+                    secureTextEntry
                 />
-                {/* 프로필 사진 URL은 보통 이미지 업로드 로직이 필요하므로 현재는 주석 처리 */}
-                {/*
-                <TextInput
-                    style={signUpStyles.input}
-                    placeholder="프로필 사진 URL (선택 사항)"
-                    placeholderTextColor="#999"
-                    value={profilePicUrl}
-                    onChangeText={setProfilePicUrl}
-                />
-                */}
-                <TextInput
-                    style={signUpStyles.input}
-                    placeholder="닉네임"
-                    placeholderTextColor="#999"
-                    value={nickname}
-                    onChangeText={setNickname}
-                />
+                
+                {/* 닉네임 입력 필드 및 중복 확인 버튼 */}
+                <View style={signUpStyles.nicknameInputContainer}>
+                    <TextInput
+                        style={[signUpStyles.input, signUpStyles.nicknameInput]}
+                        placeholder="닉네임"
+                        placeholderTextColor="#999"
+                        value={nickname}
+                        onChangeText={handleChangeNickname} // 닉네임 변경 핸들러
+                    />
+                    <TouchableOpacity
+                        style={signUpStyles.checkButton}
+                        onPress={checkNicknameAvailability}
+                        disabled={isNicknameChecking || !nickname.trim()} // 검사 중이거나 닉네임 비어있으면 비활성화
+                    >
+                        <Text style={signUpStyles.checkButtonText}>
+                            {isNicknameChecking ? "확인 중..." : "중복 확인"}
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+                {/* 닉네임 사용 가능 여부 메시지 */}
+                {isNicknameAvailable !== null && (
+                    <Text style={[
+                        signUpStyles.availabilityText,
+                        { color: isNicknameAvailable ? 'green' : 'red' }
+                    ]}>
+                        {isNicknameAvailable ? "✓ 사용 가능한 닉네임입니다." : "✗ 이미 사용 중인 닉네임입니다."}
+                    </Text>
+                )}
+
+
                 <TextInput
                     style={signUpStyles.input}
                     placeholder="이름"
@@ -144,7 +201,8 @@ const SignUpScreen = ({ navigation }) => {
                     placeholderTextColor="#999"
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad" // 전화번호 키보드
+                    keyboardType="phone-pad"
+                    maxLength={13} 
                 />
                 <TextInput
                     style={signUpStyles.input}
@@ -159,8 +217,8 @@ const SignUpScreen = ({ navigation }) => {
                     placeholderTextColor="#999"
                     value={residentIdNumber}
                     onChangeText={setResidentIdNumber}
-                    keyboardType="numeric" // 숫자 키보드
-                    maxLength={14} // '123456-1234567'에 맞춰 14자 제한
+                    keyboardType="numeric"
+                    maxLength={14}
                 />
 
                 <TouchableOpacity
@@ -182,60 +240,92 @@ const SignUpScreen = ({ navigation }) => {
     );
 };
 
-// --- 회원가입 화면을 위한 스타일 (기존과 동일하게 유지) ---
+// --- 회원가입 화면을 위한 스타일 (닉네임 중복 확인 관련 스타일 추가) ---
 const signUpStyles = StyleSheet.create({
     scrollContainer: {
-        flexGrow: 1, // ScrollView의 콘텐츠가 스크롤 가능하도록
-        justifyContent: 'center', // 컨테이너 내용을 중앙 정렬
-        paddingVertical: 30, // 상하 패딩을 약간 줄여서 화면 상하 여백 확보
-        backgroundColor: '#7145C9', // 전체 배경색
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingVertical: 30,
+        backgroundColor: '#7145C9',
     },
     container: {
         justifyContent: 'center',
         alignItems: 'center',
-        // backgroundColor: '#7145C9', // ScrollContainer에서 배경색을 이미 설정했으므로 여기서 제거 가능
-        paddingHorizontal: 25, // 좌우 패딩을 조금 더 주고, 입력 필드의 width와 조화
+        paddingHorizontal: 25,
     },
     title: {
-        fontSize: 30, // 글꼴 크기를 약간 줄여서 안정감 있게
+        fontSize: 30,
         fontWeight: 'bold',
         color: 'white',
-        marginBottom: 30, // 제목과 첫 번째 입력 필드 사이 간격 증가
+        marginBottom: 30,
     },
     input: {
-        width: '100%', // 너비를 90%에서 100%로 늘려서 좌우 패딩과 조화롭게
+        width: '100%',
         backgroundColor: '#fff',
-        paddingVertical: 14, // 상하 패딩 증가
-        paddingHorizontal: 18, // 좌우 패딩 증가
+        paddingVertical: 14,
+        paddingHorizontal: 18,
         borderRadius: 10,
-        marginBottom: 12, // 입력 필드 간 간격 약간 줄임
-        fontSize: 16, // 입력 텍스트 글꼴 크기
+        marginBottom: 12, // 입력 필드 간 간격
+        fontSize: 16,
         color: '#333',
-        borderWidth: 1, // 테두리 추가
-        borderColor: '#ddd', // 테두리 색상
+        borderWidth: 1,
+        borderColor: '#ddd',
     },
-    signupButton: {
-        width: '100%', // 너비를 90%에서 100%로 늘려서 입력 필드와 일관성 유지
-        backgroundColor: '#945EE2',
-        paddingVertical: 16, // 버튼 상하 패딩 증가
+    // --- 닉네임 입력 필드와 중복 확인 버튼을 위한 스타일 ---
+    nicknameInputContainer: {
+        flexDirection: 'row', // 가로로 배치
+        width: '100%',
+        marginBottom: 12,
+        alignItems: 'center',
+    },
+    nicknameInput: {
+        flex: 1, // 남은 공간을 모두 차지
+        marginRight: 10, // 버튼과의 간격
+        marginBottom: 0, // 기본 input의 marginBottom을 0으로 재설정 (여기서는 컨테이너가 마진을 관리)
+    },
+    checkButton: {
+        backgroundColor: '#6A40C2', // 중복 확인 버튼 색상 (기존 버튼과 다르게)
+        paddingVertical: 14, // input과 높이 맞추기
+        paddingHorizontal: 15,
         borderRadius: 10,
         alignItems: 'center',
-        marginTop: 20, // 위쪽 마진 증가
-        marginBottom: 10, // 아래쪽 마진 추가
+        justifyContent: 'center',
+    },
+    checkButtonText: {
+        color: 'white',
+        fontSize: 14, // 텍스트 크기
+        fontWeight: 'bold',
+    },
+    availabilityText: {
+        alignSelf: 'flex-start', // 왼쪽 정렬
+        marginLeft: '5%', // input과 동일한 시작점
+        marginBottom: 10, // 메시지 아래 간격
+        fontSize: 13,
+        fontWeight: 'bold',
+    },
+    // --- 기존 버튼 및 텍스트 스타일은 유지 ---
+    signupButton: {
+        width: '100%',
+        backgroundColor: '#945EE2',
+        paddingVertical: 16,
+        borderRadius: 10,
+        alignItems: 'center',
+        marginTop: 20,
+        marginBottom: 10,
     },
     buttonText: {
         color: 'white',
-        fontSize: 18, // 글꼴 크기 유지
+        fontSize: 18,
         fontWeight: 'bold',
     },
     backToLoginButton: {
-        marginTop: 15, // 위쪽 마진 조정
-        paddingVertical: 10, // 상하 패딩
-        paddingHorizontal: 20, // 좌우 패딩 (터치 영역 확보)
+        marginTop: 15,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
     },
     backToLoginText: {
         color: '#ADD8E6',
-        fontSize: 15, // 글꼴 크기를 약간 줄여서 주 버튼과 차이
+        fontSize: 15,
         textDecorationLine: 'underline',
     },
 });

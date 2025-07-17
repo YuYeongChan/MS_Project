@@ -1,13 +1,13 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from fastapi import FastAPI, Form, UploadFile
+from fastapi import FastAPI, Form, UploadFile, HTTPException
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from fastapi import FastAPI, Form, UploadFile
 from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
-
+from typing import Optional
 
 # ex ) http://195.168.9.232:1234/computer.get?page=1
 # ex ) http://192.168.56.1:1234//account.sign.up
@@ -58,6 +58,22 @@ def accountSignIn(
 ):
     # DAO 메서드 호출 시 인자명 변경
     return aDAO.signIn(user_id, password)
+
+@app.get("/account.check.nickname")
+def checkNickname(nickname: str): # 쿼리 파라미터로 닉네임을 받습니다.
+    """
+    닉네임 중복 여부를 확인하는 API 엔드포인트.
+    """
+    is_duplicate = aDAO.checkNicknameDuplicate(nickname) # DAO 메서드 호출
+
+    if is_duplicate:
+        # 중복일 경우 409 Conflict 상태 코드와 함께 메시지 반환
+        # 클라이언트에서 이 상태 코드를 받아서 중복 여부를 판단할 수 있습니다.
+        raise HTTPException(status_code=409, detail="중복된 닉네임입니다.")
+    else:
+        # 중복이 아닐 경우 200 OK 상태 코드와 함께 메시지 반환
+        return {"result": "사용 가능한 닉네임입니다."}
+
 
 # 신고 등록 API 엔드포인트
 @app.post("/registration.write")

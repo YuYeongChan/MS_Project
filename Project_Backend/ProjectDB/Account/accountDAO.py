@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta, timezone
+import os # 암호화 키 관리를 위한 모듈 (실제 배포 시 환경 변수 사용 권장)
 import jwt
+from datetime import datetime, timedelta, timezone
 from fastapi.responses import JSONResponse
 from ProjectDB.SSY.ssyDBManager import SsyDBManager
 from passlib.context import CryptContext # 비밀번호 해싱
 from cryptography.fernet import Fernet # 강력한 암호화를 위한 라이브러리
-import os # 암호화 키 관리를 위한 모듈 (실제 배포 시 환경 변수 사용 권장)
+
 
 # 아이디: user_test_01
 # 비밀번호: password123!
@@ -124,5 +125,29 @@ class AccountDAO:
             return JSONResponse({"result": "로그인 실패: 사용자 ID 없음"}, headers=h)
         except Exception as e:
             return JSONResponse({"result": f"DB 오류: {e}"}, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # ---닉네임 중복 확인 메서드 추가 ---
+    def checkNicknameDuplicate(self, nickname: str) -> bool:
+        """
+        데이터베이스에서 닉네임 중복 여부를 확인합니다.
+        중복되면 True, 아니면 False를 반환합니다.
+        """
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = "SELECT COUNT(*) FROM Users WHERE nickname = :nickname"
+            cur.execute(sql, {'nickname': nickname})
+            count = cur.fetchone()[0] # 결과의 첫 번째 컬럼 (COUNT 값)
+
+            return count > 0 # count가 0보다 크면 중복
+
+        except Exception as e:
+            print(f"닉네임 중복 확인 중 오류 발생: {str(e)}")
+            # 오류 발생 시 중복이 아니라고 가정하거나, 더 상세한 에러 처리를 할 수 있습니다.
+            # 여기서는 단순히 False를 반환하여 클라이언트가 계속 진행하게 하지만,
+            # 실제로는 HTTPException을 발생시켜 서버 오류를 알리는 것이 좋습니다.
+            return False 
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
