@@ -8,8 +8,11 @@ import {
     StyleSheet,
     ScrollView,
     Platform,
+    Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker"; // ImagePicker 임포트
 
+// --- 중요: Python FastAPI 서버의 기본 URL 설정 ---
 const API_BASE_URL = 'http://192.168.56.1:1234'; 
 
 const SignUpScreen = ({ navigation }) => {
@@ -20,12 +23,49 @@ const SignUpScreen = ({ navigation }) => {
     const [phoneNumber, setPhoneNumber] = useState("");
     const [address, setAddress] = useState("");
     const [residentIdNumber, setResidentIdNumber] = useState("");
+    const [profilePhoto, setProfilePhoto] = useState(null); // 선택된 프로필 사진 URI
 
     const [isLoading, setIsLoading] = useState(false);
     const [isNicknameChecking, setIsNicknameChecking] = useState(false);
     const [isNicknameAvailable, setIsNicknameAvailable] = useState(null);
     const [isUserIdChecking, setIsUserIdChecking] = useState(false);
-    const [isUserIdAvailable, setIsUserIdAvailable] = useState(null); // ID 사용 가능 여부 (true/false/null)
+    const [isUserIdAvailable, setIsUserIdAvailable] = useState(null);
+
+
+    // --- 프로필 사진 선택 함수 (PublicPropertyReportScreen 참조하여 수정) ---
+    const pickProfilePhoto = async () => {
+        console.log("1. [pickProfilePhoto] 함수 시작!");
+
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            console.log("2. [pickProfilePhoto] 권한 요청 상태:", status);
+
+            if (status !== 'granted') {
+                Alert.alert('권한 필요', '사진 라이브러리 접근 권한이 필요합니다. 설정에서 허용해주세요.');
+                console.log("3. [pickProfilePhoto] 권한 거부됨, 함수 종료.");
+                return;
+            }
+            console.log("4. [pickProfilePhoto] 권한 'granted', 갤러리 열기 시도.");
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ImagePicker.MediaTypeOptions.Images, // PublicPropertyReportScreen과 동일하게 설정
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.7,
+            });
+            console.log("5. [pickProfilePhoto] ImagePicker.launchImageLibraryAsync 결과:", result);
+
+            if (!result.canceled) {
+                setProfilePhoto(result.assets[0].uri);
+                console.log("6. [pickProfilePhoto] 사진 선택 완료:", result.assets[0].uri);
+            } else {
+                console.log("7. [pickProfilePhoto] 사진 선택 취소됨.");
+            }
+        } catch (error) {
+            console.error("8. [pickProfilePhoto] 예측하지 못한 오류 발생:", error);
+            Alert.alert('오류', '사진 선택 중 문제가 발생했습니다: ' + error.message);
+        }
+    };
 
 
     // --- 닉네임 변경 핸들러 및 중복 확인 함수 (변경 없음) ---
@@ -70,13 +110,12 @@ const SignUpScreen = ({ navigation }) => {
     };
 
 
-    // --- 사용자 ID 변경 핸들러 ---
+    // --- 사용자 ID 변경 핸들러 및 중복 확인 함수 (변경 없음) ---
     const handleChangeUserId = (text) => {
         setUserId(text);
-        setIsUserIdAvailable(null); // ID가 변경되면 중복 상태를 초기화
+        setIsUserIdAvailable(null);
     };
 
-    // --- 사용자 ID 중복 확인 함수 (onBlur 시 자동 호출) ---
     const checkUserIdAvailabilityOnBlur = async () => {
         if (!userId.trim()) {
             setIsUserIdAvailable(null);
@@ -136,14 +175,9 @@ const SignUpScreen = ({ navigation }) => {
         const phoneRegex = /^01(?:0|1|[6-9])(?:\-|\s)?(?:\d{3}|\d{4})(?:\-|\s)?\d{4}$/;
         if (phoneNumber.trim() && !phoneRegex.test(phoneNumber)) { Alert.alert("알림", "유효한 전화번호 형식(예: 010-1234-5678)을 입력해주세요."); return; }
 
-        // --- 3. 중복 검사 결과 최종 확인 (ID 및 닉네임) ---
-        // 사용자 ID 중복 검사 최종 확인
-        // isUserIdAvailable이 null이면 아직 검사 안 했거나 오류 상태.
-        // isUserIdAvailable이 false면 중복이거나 형식 오류.
-        if (isUserIdAvailable === null) {
-            // 사용자가 onBlur를 거치지 않고 바로 회원가입 버튼을 누른 경우, 여기서 강제 검사
-            Alert.alert("알림", "사용자 ID 중복 확인이 필요합니다. 잠시 기다려주시거나 ID 입력 후 다른 필드를 눌러주세요.");
-            // 선택적으로 여기서 checkUserIdAvailabilityOnBlur()를 호출하여 검사를 시작할 수도 있습니다.
+        // 3. 중복 검사 결과 최종 확인 (ID 및 닉네임)
+        if (isUserIdAvailable === null) { 
+            Alert.alert("알림", "사용자 ID 중복 확인이 필요합니다. 잠시 기다려주시거나 ID 입력 후 다른 필드를 눌러 확인해주세요.");
             return;
         }
         if (!isUserIdAvailable) {
@@ -151,7 +185,6 @@ const SignUpScreen = ({ navigation }) => {
             return;
         }
 
-        // 닉네임 중복 검사 최종 확인
         if (isNicknameAvailable === null || !isNicknameAvailable) {
             Alert.alert("알림", "닉네임 중복 확인을 완료하고 사용 가능한 닉네임을 입력해주세요.");
             return;
@@ -160,17 +193,36 @@ const SignUpScreen = ({ navigation }) => {
         setIsLoading(true);
 
         const formData = new FormData();
+        // DB 컬럼 순서 (추정): user_id | password | profile_pic_url | nickname | name | address | phone_number | resident_id_number | score
+        // FormData append 순서를 이 DB 컬럼 순서와 유사하게 맞춰봅니다.
         formData.append('user_id', userId);
         formData.append('password', password);
-        formData.append('nickname', nickname);
-        formData.append('name', name);
-        formData.append('address', address); 
-        formData.append('resident_id_number', residentIdNumber);
-        if (phoneNumber.trim()) {
-            formData.append('phone_number', phoneNumber); 
+        // profile_pic_url이 세 번째 컬럼이므로 여기서 추가
+        if (profilePhoto) {
+            const filename = profilePhoto.split('/').pop();
+            const fileExtension = filename.split('.').pop();
+            const fileType = `image/${fileExtension.toLowerCase()}`;
+            formData.append('profile_pic', { // 백엔드에서 'profile_pic'으로 받도록 설정
+                uri: Platform.OS === 'android' ? profilePhoto : profilePhoto.replace('file://', ''),
+                name: filename,
+                type: fileType,
+            });
         } else {
-            formData.append('phone_number', '');
+            // 프로필 사진이 선택되지 않았을 경우, 백엔드에서 Optional[UploadFile] = File(None)으로 받으므로,
+            // 이 필드를 아예 append하지 않거나, 명시적으로 빈 값을 보낼 수 있습니다.
+            // FastAPI는 None을 기본값으로 처리하므로, 여기서는 append하지 않아도 됩니다.
+            // 그러나 명시적인 `NULL` 처리를 위해 백엔드에 따라 빈 문자열을 보낼 수도 있습니다.
+            // 현재 `profile_pic`이 `File(None)`이고 DAO가 `profile_pic_filename = None`을 기본으로 하므로,
+            // else 블록은 필요하지 않을 수 있습니다. 테스트를 통해 결정합니다.
         }
+        
+        formData.append('nickname', nickname); // 네 번째 컬럼
+        formData.append('name', name);         // 다섯 번째 컬럼
+        formData.append('address', address);   // 여섯 번째 컬럼
+        // 전화번호와 주민등록번호 순서가 DB 데이터에 따르면 서로 바뀐 것으로 보이므로, 여기도 맞춤
+        formData.append('phone_number', phoneNumber.trim() ? phoneNumber : ''); // 일곱 번째 컬럼
+        formData.append('resident_id_number', residentIdNumber); // 여덟 번째 컬럼 (암호화된 값이 들어갈 곳)
+
 
         try {
             const response = await fetch(`${API_BASE_URL}/account.sign.up`, {
@@ -181,28 +233,25 @@ const SignUpScreen = ({ navigation }) => {
 
             const responseData = await response.json();
 
-            if (response.ok) { // HTTP 200 OK (회원가입 성공)
+            if (response.ok) {
                 Alert.alert("회원가입 성공", responseData.result || "회원가입에 성공했습니다!");
                 console.log("회원가입 성공 데이터:", responseData);
                 navigation.goBack(); 
-            } else { // HTTP 상태 코드가 2xx가 아닌 경우 (FastAPI에서 HTTPException 발생 등)
+            } else {
                 console.error("회원가입 서버 응답 오류 (상태 코드:", response.status, "):", responseData);
-                
-                // --- 이 부분을 추가/수정합니다! ---
-                // 서버에서 보낸 에러 메시지를 확인하여 특정 오류에 대한 알림
                 if (responseData.detail && responseData.detail.includes("UNIQUE constraint")) {
                     Alert.alert("회원가입 실패", "이미 사용 중인 사용자 ID 또는 닉네임입니다. 다른 정보를 입력해주세요.");
                 } else if (responseData.detail) {
-                    Alert.alert("회원가입 실패", responseData.detail); // 서버가 보낸 구체적인 오류 메시지
+                    Alert.alert("회원가입 실패", responseData.detail);
                 } else {
                     Alert.alert("회원가입 실패", responseData.result || "회원가입에 실패했습니다. 다시 시도해주세요.");
                 }
             }
-        } catch (error) { // 네트워크 오류 또는 fetch 요청 자체에서 발생한 오류
+        } catch (error) {
             console.error("네트워크 요청 실패:", error);
             Alert.alert("오류", "서버와 통신하는 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.");
         } finally {
-            setIsLoading(false); // 로딩 종료
+            setIsLoading(false);
         }
     };
 
@@ -262,6 +311,20 @@ const SignUpScreen = ({ navigation }) => {
                         {isNicknameAvailable ? "✓ 사용 가능한 닉네임입니다." : "✗ 이미 사용 중인 닉네임입니다."}
                     </Text>
                 )}
+
+                {/* --- 프로필 사진 선택 섹션 --- */}
+                <Text style={signUpStyles.photoSubtitle}>프로필 사진 (선택 사항)</Text>
+                <TouchableOpacity style={signUpStyles.photoBox} onPress={pickProfilePhoto}>
+                    {profilePhoto ? (
+                        <Image source={{ uri: profilePhoto }} style={signUpStyles.profilePhoto} 
+                        onError={(e) => {
+                            console.log('이미지 로딩 실패:', e.nativeEvent.error);
+                            Alert.alert('오류', '프로필 사진을 불러올 수 없습니다. 다른 사진을 선택해 주세요.');
+                        }}/>
+                    ) : (
+                        <Text style={signUpStyles.plusIcon}>＋</Text>
+                    )}
+                </TouchableOpacity>
 
                 <TextInput
                     style={signUpStyles.input}
@@ -384,6 +447,39 @@ const signUpStyles = StyleSheet.create({
         fontSize: 13,
         color: 'gray',
     },
+    // --- 프로필 사진 관련 스타일 ---
+    photoSubtitle: {
+        alignSelf: 'flex-start',
+        marginLeft: 0, 
+        marginBottom: 10,
+        marginTop: 10,
+        fontSize: 17,
+        fontWeight: 'bold',
+        color: 'white',
+    },
+    photoBox: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        backgroundColor: '#e0e0e0',
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 20,
+        overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: '#ccc',
+    },
+    profilePhoto: {
+        width: '100%',
+        height: '100%',
+        resizeMode: 'cover',
+    },
+    plusIcon: {
+        fontSize: 40,
+        color: '#888',
+        fontWeight: 'normal',
+    },
+    // --- 기존 버튼 및 텍스트 스타일은 유지 ---
     signupButton: {
         width: '100%',
         backgroundColor: '#945EE2',
@@ -404,7 +500,7 @@ const signUpStyles = StyleSheet.create({
         paddingHorizontal: 20,
     },
     backToLoginText: {
-        color: '#ADD8E6',
+        color: '#ADD8E6', 
         fontSize: 15,
         textDecorationLine: 'underline',
     },

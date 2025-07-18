@@ -28,16 +28,15 @@ class RegistrationDAO:
                 f.write(content)
 
         except Exception as e:
-            return JSONResponse({"result": "사진 저장 실패", "error": str(e)}, headers=h)
+            error_msg = f"신고 사진 저장 실패 (파일 시스템): {str(e)}"
+            print(f"ERROR: {error_msg}") # ERROR 명시적으로 표시
+            # --- 수정: 상태 코드를 500 Internal Server Error로 변경 (기존과 동일) ---
+            return JSONResponse({"result": "신고 실패", "error": error_msg}, status_code=500, headers=h)
 
         try:
             con, cur = SsyDBManager.makeConCur()
 
-            # --- 날짜 형식 변환 ---
-            # 'YYYY/MM/DD' 형식의 문자열을 Python의 datetime 객체로 변환합니다.
-            # 예: "2025/07/17" -> datetime.datetime(2025, 7, 17, 0, 0)
-            # 클라이언트에서 보낸 날짜를 그대로 사용합니다.
-            parsed_report_date = datetime.strptime(report_date, "%Y/%m/%d")
+            parsed_report_date = datetime.strptime(report_date, "%Y-%m-%d")
 
             sql = """
                 INSERT INTO Reports (
@@ -52,19 +51,28 @@ class RegistrationDAO:
                 'location_description': location_description,
                 'latitude': latitude,
                 'longitude': longitude,
+                'report_date': parsed_report_date,
                 'details': details,
-                'report_date': parsed_report_date, # <<< SYSTIMESTAMP 대신 클라이언트에서 받은 날짜 사용
             })
             con.commit()
-            return JSONResponse({"result": "신고 등록 성공"}, headers=h)
+            print("INFO: 신고 등록 DB 커밋 성공.") # 성공 로그 추가
+            return JSONResponse({"result": "신고 등록 성공"}, status_code=200, headers=h) # 성공 시 200 OK 명시
+        
         except Exception as e:
             if con: con.rollback()
+            # DB 삽입 실패 시 저장된 사진 파일 삭제
             if filename and file_path and os.path.exists(file_path):
                 try:
                     os.remove(file_path)
+                    print(f"INFO: DB 삽입 실패 후 신고 사진 파일 삭제 완료: {file_path}")
                 except Exception as file_e:
-                    print(f"오류: DB 삽입 실패 후 임시 파일 삭제 실패 {file_path}: {file_e}")
-            return JSONResponse({"result": "신고 등록 실패", "error": str(e)}, headers=h)
+                    print(f"ERROR: DB 삽입 실패 후 신고 사진 파일 삭제 실패 {file_path}: {file_e}")
+            
+            error_msg = f"신고 등록 DB 오류 발생: {str(e)}"
+            print(f"ERROR: {error_msg}") # ERROR 명시적으로 표시
+
+            # --- 수정: 상태 코드를 500 Internal Server Error로 변경 (기존과 동일) ---
+            return JSONResponse({"result": "신고 실패", "error": error_msg}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
 
