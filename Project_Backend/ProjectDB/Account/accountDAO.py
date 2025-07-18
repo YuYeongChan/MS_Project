@@ -46,10 +46,11 @@ class AccountDAO:
     # 주민등록번호 복호화
     def decrypt_resident_id_number(self, encrypted_rrn: str) -> str:
         return cipher_suite.decrypt(encrypted_rrn.encode('utf-8')).decode('utf-8')
-
-    def signUp(self, user_id, password, nickname, name, address, resident_id_number):
+    
+    # 회원가입 데이터 저장
+    def signUp(self, user_id, password, nickname, name, address, resident_id_number, phone_number=None): # <<< phone_number 추가!
         h = {"Access-Control-Allow-Origin": "*"}
-        con, cur = None, None # 초기화
+        con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
             
@@ -60,9 +61,9 @@ class AccountDAO:
 
             sql = """
                 INSERT INTO Users (
-                    user_id, password, nickname, name, address, resident_id_number, score
+                    user_id, password, nickname, name, address, resident_id_number, phone_number, score, profile_pic_url
                 ) VALUES (
-                    :user_id, :password, :nickname, :name, :address, :resident_id_number, 0
+                    :user_id, :password, :nickname, :name, :address, :resident_id_number, :phone_number, 0, NULL
                 )
             """
             cur.execute(sql, {
@@ -71,21 +72,26 @@ class AccountDAO:
                 'nickname': nickname,
                 'name': name,
                 'address': address,
-                'resident_id_number': encrypted_resident_id_number
+                'resident_id_number': encrypted_resident_id_number,
+                'phone_number': phone_number # <<< SQL 바인딩에도 phone_number 추가!
             })
             con.commit()
             return JSONResponse({"result": "회원가입 성공"}, headers=h)
         except Exception as e:
-            if con: con.rollback() # 오류 발생 시 롤백
+            if con: con.rollback()
             error_message = str(e).upper()
+            print(f"회원가입 DB 오류 발생: {error_message}") # 디버깅을 위해 상세 오류 출력
+
             if "ORA-00001" in error_message: # Oracle UNIQUE 제약조건 위반 오류 코드
-                if "USERS_USER_ID_UK" in error_message:
+                if "USERS_USER_ID_UK" in error_message or "USER_ID" in error_message: # 좀 더 일반적인 방식으로 변경
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 존재하는 사용자 ID입니다."}, headers=h)
-                elif "USERS_NICKNAME_UK" in error_message:
+                elif "USERS_NICKNAME_UK" in error_message or "NICKNAME" in error_message:
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 존재하는 닉네임입니다."}, headers=h)
-                elif "USERS_RESIDENT_ID_NUMBER_UK" in error_message:
+                elif "USERS_RESIDENT_ID_NUMBER_UK" in error_message or "RESIDENT_ID_NUMBER" in error_message:
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 등록된 주민등록번호입니다."}, headers=h)
-            return JSONResponse({"result": "회원가입 실패", "error": f"DB 오류: {e}"}, headers=h)
+                elif "USERS_PHONE_NUMBER_UK" in error_message or "PHONE_NUMBER" in error_message: # 전화번호 중복 제약 추가 시
+                     return JSONResponse({"result": "회원가입 실패", "error": "이미 등록된 전화번호입니다."}, headers=h)
+            return JSONResponse({"result": "회원가입 실패", "error": f"알 수 없는 DB 오류: {e}"}, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
 
@@ -149,5 +155,23 @@ class AccountDAO:
             # 여기서는 단순히 False를 반환하여 클라이언트가 계속 진행하게 하지만,
             # 실제로는 HTTPException을 발생시켜 서버 오류를 알리는 것이 좋습니다.
             return False 
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    #---id 중복 확인 메서드 추가
+    def checkUserIdDuplicate(self, user_id: str) -> bool: # <<< 메서드 이름과 파라미터 이름 정확히 확인
+        """
+        데이터베이스에서 사용자 ID(이메일) 중복 여부를 확인합니다.
+        """
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = "SELECT COUNT(*) FROM Users WHERE user_id = :user_id" # SQL 쿼리 및 바인딩 이름 확인
+            cur.execute(sql, {'user_id': user_id})
+            count = cur.fetchone()[0]
+            return count > 0
+        except Exception as e:
+            print(f"사용자 ID 중복 확인 중 오류 발생: {str(e)}")
+            return False # 오류 발생 시에도 False를 반환하므로, 서버 로그를 잘 확인해야 함
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)

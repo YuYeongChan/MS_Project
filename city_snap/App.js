@@ -6,6 +6,7 @@ import AccountScreen from "./src/contents/AccountScreen";
 import SignUpScreen from "./src/contents/SignUpScreen";
 const Stack = createNativeStackNavigator();
 
+// npx expo start
 export default function App() {
   return (
     <NavigationContainer>

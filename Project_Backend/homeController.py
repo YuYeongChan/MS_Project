@@ -44,11 +44,12 @@ def accountSignUp(
     password: str = Form(...),
     nickname: str = Form(...),
     name: str = Form(...), # DDL 및 DAO에 맞춰 'full_name'에서 'name'으로 변경
+    phone_number: Optional[str] = Form(None),
     address: str = Form(...),
-    resident_id_number: str = Form(...) # DDL 및 DAO에 맞춰 'rrn'에서 'resident_id_number'로 변경
+    resident_id_number: str = Form(...)# DDL 및 DAO에 맞춰 'rrn'에서 'resident_id_number'로 변경
 ):
     # DAO 메서드 호출 시 인자명도 변경된 이름에 맞춰 전달
-    return aDAO.signUp(user_id, password, nickname, name, address, resident_id_number)
+    return aDAO.signUp(user_id, password, nickname, name, phone_number, address, resident_id_number)
 
 # 로그인 API 엔드포인트
 @app.post("/account.sign.in")
@@ -73,6 +74,19 @@ def checkNickname(nickname: str): # 쿼리 파라미터로 닉네임을 받습�
     else:
         # 중복이 아닐 경우 200 OK 상태 코드와 함께 메시지 반환
         return {"result": "사용 가능한 닉네임입니다."}
+    
+@app.get("/account.check.userid") # <<< 이 부분의 엔드포인트 이름과 메서드(GET)를 정확히 확인
+def checkUserId(user_id: str): # 쿼리 파라미터 이름도 정확히 확인
+    """
+    사용자 ID(이메일) 중복 여부를 확인하는 API 엔드포인트.
+    """
+    # 이 메서드를 호출하기 전에 DAO 메서드 이름이 정확한지 확인
+    is_duplicate = aDAO.checkUserIdDuplicate(user_id)
+
+    if is_duplicate:
+        raise HTTPException(status_code=409, detail="이미 사용 중인 사용자 ID입니다.")
+    else:
+        return {"result": "사용 가능한 사용자 ID입니다."}
 
 
 # 신고 등록 API 엔드포인트

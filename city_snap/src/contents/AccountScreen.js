@@ -12,10 +12,11 @@ import {
 // 이 부분은 나중에 설정하기로 했으므로, 현재는 플레이스홀더를 유지합니다.
 // 실제 사용 시에는 FastAPI 서버의 IP 주소와 포트로 변경해야 합니다.
 // 예: 'http://192.168.1.100:8000' 또는 'http://localhost:8000' (에뮬레이터/시뮬레이터용)
-const API_BASE_URL = 'http://195.168.9.69:1234'; 
+const API_BASE_URL = 'http://192.168.56.1:1234'; 
 //test 
 // user_test_01
 // password123!
+// 다른 계정들의 비밀번호는 qwer1234!
 const LoginScreen = ({ navigation }) => { // navigation prop을 받도록 수정 (화면 이동용)
     const [userId, setUserId] = useState(""); // 사용자 ID 상태
     const [password, setPassword] = useState(""); // 비밀번호 상태
