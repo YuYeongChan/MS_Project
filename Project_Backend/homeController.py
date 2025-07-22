@@ -20,6 +20,7 @@ os.makedirs(profile_photo_folder, exist_ok=True)
 
 # "/profile_photos" 경로로 해당 폴더를 정적 파일 제공
 app.mount("/profile_photos", StaticFiles(directory=profile_photo_folder), name="profile_photos")
+from fastapi.responses import JSONResponse
 # ex ) http://195.168.9.232:1234/computer.get?page=1
 # ex ) http://192.168.56.1:1234//account.sign.up
 # uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
@@ -132,3 +133,16 @@ def addManagementStatus(
 @app.get("/management.status.list")
 def getManagementStatusList():
     return msDAO.getAllStatuses()
+
+
+
+
+@app.get("/info.speechToText")
+def infoSpeech2Txt(location: str, type: str, problem: str):
+    result = {
+        "장소": location,
+        "공공기물 종류": type,
+        "발견된 문제 또는 점검 필요 사유": problem
+    }
+    headers = {"Access-Control-Allow-Origin": "*"}
+    return JSONResponse(result, headers=headers)
