@@ -8,6 +8,7 @@ from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
 from typing import Optional
 
+from fastapi.responses import JSONResponse
 # ex ) http://195.168.9.232:1234/computer.get?page=1
 # ex ) http://192.168.56.1:1234//account.sign.up
 # uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
@@ -121,3 +122,16 @@ def addManagementStatus(
 @app.get("/management.status.list")
 def getManagementStatusList():
     return msDAO.getAllStatuses()
+
+
+
+
+@app.get("/info.speechToText")
+def infoSpeech2Txt(location: str, type: str, problem: str):
+    result = {
+        "장소": location,
+        "공공기물 종류": type,
+        "발견된 문제 또는 점검 필요 사유": problem
+    }
+    headers = {"Access-Control-Allow-Origin": "*"}
+    return JSONResponse(result, headers=headers)
