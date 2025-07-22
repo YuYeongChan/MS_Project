@@ -7,6 +7,7 @@ import {
     View,
     StyleSheet, // 스타일을 위해 StyleSheet 임포트
 } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- 중요: Python FastAPI 서버의 기본 URL 설정 ---
 // 이 부분은 나중에 설정하기로 했으므로, 현재는 플레이스홀더를 유지합니다.
@@ -54,13 +55,14 @@ const LoginScreen = ({ navigation }) => { // navigation prop을 받도록 수정
 
             const responseData = await response.json();
 
-            if (response.ok) { // HTTP 상태 코드가 2xx (성공)인 경우
+            if (response.ok) {
                 Alert.alert("로그인 성공", responseData.result || "로그인에 성공했습니다!");
-                // TODO: 로그인 성공 후, 사용자 정보를 저장하고 (예: AsyncStorage),
-                // MainScreen으로 이동하는 로직을 여기에 추가해야 합니다.
-                console.log("로그인 성공 데이터:", responseData);
-                
-                // 로그인 성공 시 MainScreen으로 이동 (App.js에서 설정된 'MainScreen' 이름 사용)
+                console.log("JWT 토큰:", responseData.token);
+
+                // 토큰 및 user_id 저장
+                await AsyncStorage.setItem('auth_token', responseData.token);
+                await AsyncStorage.setItem('user_id', userId);
+
                 navigation.replace('MainScreen'); 
 
             } else {

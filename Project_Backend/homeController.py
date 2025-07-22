@@ -7,12 +7,23 @@ from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
 from typing import Optional
+from fastapi.staticfiles import StaticFiles
+import os
 
+# FastAPI 앱 생성
+app = FastAPI()
+# 서버 루트 기준 상대 경로 (이미 프로필 사진이 여기에 저장되고 있음)
+profile_photo_folder = os.path.join(os.path.dirname(__file__), 'profile_photos')
+
+# 폴더가 없다면 생성
+os.makedirs(profile_photo_folder, exist_ok=True)
+
+# "/profile_photos" 경로로 해당 폴더를 정적 파일 제공
+app.mount("/profile_photos", StaticFiles(directory=profile_photo_folder), name="profile_photos")
 # ex ) http://195.168.9.232:1234/computer.get?page=1
 # ex ) http://192.168.56.1:1234//account.sign.up
 # uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
 # ip 주소 계속 바뀜 :195.168.9.69
-app = FastAPI()
 
 # origins = [
 #     "http://localhost",

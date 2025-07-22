@@ -4,13 +4,14 @@ import MainScreen from "./src/contents/MainScreen";
 import PublicPropertyReportScreen from './src/contents/PublicPropertyReportScreen';
 import AccountScreen from "./src/contents/AccountScreen";
 import SignUpScreen from "./src/contents/SignUpScreen";
+import MyInfoScreen from "./src/contents/MyInfoScreen";
 const Stack = createNativeStackNavigator();
 
 // npx expo start
 export default function App() {
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="MainScreen">
+      <Stack.Navigator initialRouteName="AccountScreen">
         <Stack.Screen name="MainScreen" component={MainScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} options={{ headerShown: false }}/>
         {/* <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} /> */}
@@ -19,6 +20,8 @@ export default function App() {
         <Stack.Screen name="SignUpScreen" component={SignUpScreen} options={{ headerShown: false }}/>
         {/* <Stack.Screen name="NotificationScreen" component={NotificationScreen} /> */}
         {/* <Stack.Screen name="SettingsScreen" component={SettingsScreen} /> */}
+
+        <Stack.Screen name="MyInfoScreen" component={MyInfoScreen} options={{ headerShown: false }} />
       </Stack.Navigator>
     </NavigationContainer>
   );
