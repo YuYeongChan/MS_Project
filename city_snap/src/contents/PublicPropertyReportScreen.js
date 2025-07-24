@@ -1,9 +1,8 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
-import { useState, useEffect } from "react";
 
 import {
     Alert,
@@ -16,8 +15,6 @@ import {
     Platform,
     ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 // ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
 import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
 import ChooseDate from "./sub_contents/ChooseDate";
