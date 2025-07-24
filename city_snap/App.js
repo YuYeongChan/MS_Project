@@ -5,6 +5,7 @@ import PublicPropertyReportScreen from './src/contents/PublicPropertyReportScree
 import AccountScreen from "./src/contents/AccountScreen";
 import SignUpScreen from "./src/contents/SignUpScreen";
 import MyInfoScreen from "./src/contents/MyInfoScreen";
+import DamageMapScreen from './src/contents/DamageMapScreen';
 const Stack = createNativeStackNavigator();
 
 // npx expo start
@@ -14,7 +15,7 @@ export default function App() {
       <Stack.Navigator initialRouteName="AccountScreen">
         <Stack.Screen name="MainScreen" component={MainScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} options={{ headerShown: false }}/>
-        {/* <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} /> */}
+        <Stack.Screen name="DamageMapScreen" component={DamageMapScreen}options={{ headerShown: false }} />
         {/* <Stack.Screen name="ScoreScreen" component={ScoreScreen} /> */}
         <Stack.Screen name="AccountScreen" component={AccountScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="SignUpScreen" component={SignUpScreen} options={{ headerShown: false }}/>

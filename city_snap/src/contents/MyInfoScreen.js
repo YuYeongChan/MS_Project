@@ -2,8 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
-
-const API_BASE_URL = 'http://192.168.56.1:1234'; // 이미지 경로를 위한 기본 주소
+import { API_BASE_URL } from '../utils/config';
 
 const MyInfoScreen = () => {
   const [userInfo, setUserInfo] = useState(null);

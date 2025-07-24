@@ -1,170 +1,102 @@
 import React from "react";
 import { WebView } from "react-native-webview";
 
-export default function KakaoMapPicker({ onLocationSelect }) {
-    const kakaoMapHTML = `
+export default function GoogleMapPicker({ onLocationSelect }) {
+  // ** 중요: 'YOUR_Maps_API_KEY' 부분을 실제 구글 지도 API 키로 교체하세요. **
+  const googleMapsApiKey = "AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY"; // 이곳에 본인의 API 키를 입력하세요.
+
+  const googleMapHTML = `
     <!DOCTYPE html>
     <html>
-      <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-        <script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b2375d11c07378f8a8c5901b171c6274&libraries=services"></script>
-        <style>html, body, #map {width:100%; height:100%; margin:0; padding:0}</style>
-      </head>
-      <body>
-        <div id="map"></div>
-        <script>
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+      <title>Google Map Picker</title>
+      <style>html, body, #map {height:100%; width:100%; margin:0; padding:0;}</style>
+      <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places&language=ko&callback=initMap"></script>
+    </head>
+    <body>
+      <div id="map"></div>
+      <script>
+        var map;
+        var marker;
+        var geocoder; // Geocoder 객체 추가
+
+        function initMap() {
           try {
-            // window.ReactNativeWebView.postMessage("지도 초기화 시작");
-
-            var map = new kakao.maps.Map(document.getElementById('map'), {
-              center: new kakao.maps.LatLng(37.5665, 126.9780), // 기본 좌표
-              level: 1
+            // 지도 초기화
+            map = new google.maps.Map(document.getElementById('map'), {
+              center: {lat: 37.5665, lng: 126.9780}, // 기본 중심 좌표: 서울 시청
+              zoom: 15, // 초기 줌 레벨
+              disableDefaultUI: true // 기본 UI (줌 버튼, 스트리트 뷰 등) 비활성화 (선택 사항)
             });
 
-            var marker = new kakao.maps.Marker({
-              position: new kakao.maps.LatLng(37.5665, 126.9780),
+            // 마커 생성 및 지도에 추가
+            marker = new google.maps.Marker({
+              position: {lat: 37.5665, lng: 126.9780}, // 마커 초기 위치
+              map: map // 마커를 표시할 지도
             });
 
-            var geocoder = new kakao.maps.services.Geocoder();
+            // Geocoder 서비스 초기화
+            geocoder = new google.maps.Geocoder();
 
-            marker.setMap(map);
+            // 지도 클릭 이벤트 리스너 추가
+            map.addListener('click', function(e) {
+              var latLng = e.latLng; // 클릭한 위치의 위경도 좌표
+              marker.setPosition(latLng); // 마커 위치 이동
 
-            kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
-
-              marker.setPosition(mouseEvent.latLng);
-
-              var loc = marker.getPosition();
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                lat: loc.getLat(),
-                lng: loc.getLng()
-              }));
+              // 클릭한 위치의 좌표로 주소 정보 요청
+              geocoder.geocode({'location': latLng}, function(results, status) {
+                if (status === 'OK') {
+                  if (results[0]) {
+                    // 주소 정보와 함께 위치 데이터 전송
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      lat: latLng.lat(),
+                      lng: latLng.lng(),
+                      address: results[0].formatted_address // 가장 정확한 주소 형식 (한국어 주소)
+                    }));
+                  } else {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                      lat: latLng.lat(),
+                      lng: latLng.lng(),
+                      address: '주소를 찾을 수 없습니다.'
+                    }));
+                  }
+                } else {
+                  window.ReactNativeWebView.postMessage(JSON.stringify({
+                    lat: latLng.lat(),
+                    lng: latLng.lng(),
+                    address: 'Geocoding 실패: ' + status
+                  }));
+                }
+              });
             });
 
-            // window.ReactNativeWebView.postMessage("지도 초기화 완료");
           } catch (e) {
-            window.ReactNativeWebView.postMessage("에러 발생: " + e.message);
+            // 오류 발생 시 React Native로 메시지 전송
+            window.ReactNativeWebView.postMessage("구글 지도 초기화 오류: " + e.message);
           }
-        </script>
-      </body>
+        }
+      </script>
+    </body>
     </html>
   `;
 
-    // const kakaoMapHTML = `
-    // <!DOCTYPE html>
-    // <html>
-    // <head>
-    //     <meta charset="utf-8">
-    //     <title>좌표로 주소를 얻어내기</title>
-    //     <style>
-    //     .map_wrap {position:relative;width:100%;height:350px;}
-    //     .title {font-weight:bold;display:block;}
-    //     .hAddr {position:absolute;left:10px;top:10px;border-radius: 2px;background:#fff;background:rgba(255,255,255,0.8);z-index:1;padding:5px;}
-    //     #centerAddr {display:block;margin-top:2px;font-weight: normal;}
-    //     .bAddr {padding:5px;text-overflow: ellipsis;overflow: hidden;white-space: nowrap;}
-    // </style>
-    // </head>
-    // <body>
-    // <div class="map_wrap">
-    //     <div id="map" style="width:100%;height:100%;position:relative;overflow:hidden;"></div>
-    //     <div class="hAddr">
-    //         <span class="title">지도중심기준 행정동 주소정보</span>
-    //         <span id="centerAddr"></span>
-    //     </div>
-    // </div>
-
-    // <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=발급받은 APP KEY를 사용하세요&libraries=services"></script>
-    // <script>
-    // var mapContainer = document.getElementById('map'), // 지도를 표시할 div 
-    //     mapOption = {
-    //         center: new kakao.maps.LatLng(37.566826, 126.9786567), // 지도의 중심좌표
-    //         level: 1 // 지도의 확대 레벨
-    //     };  
-
-    // // 지도를 생성합니다    
-    // var map = new kakao.maps.Map(mapContainer, mapOption); 
-
-    // // 주소-좌표 변환 객체를 생성합니다
-    // var geocoder = new kakao.maps.services.Geocoder();
-
-    // var marker = new kakao.maps.Marker(), // 클릭한 위치를 표시할 마커입니다
-    //     infowindow = new kakao.maps.InfoWindow({zindex:1}); // 클릭한 위치에 대한 주소를 표시할 인포윈도우입니다
-
-    // // 현재 지도 중심좌표로 주소를 검색해서 지도 좌측 상단에 표시합니다
-    // searchAddrFromCoords(map.getCenter(), displayCenterInfo);
-
-    // // 지도를 클릭했을 때 클릭 위치 좌표에 대한 주소정보를 표시하도록 이벤트를 등록합니다
-    // kakao.maps.event.addListener(map, 'click', function(mouseEvent) {
-    //     searchDetailAddrFromCoords(mouseEvent.latLng, function(result, status) {
-    //         if (status === kakao.maps.services.Status.OK) {
-    //             var detailAddr = !!result[0].road_address ? '<div>도로명주소 : ' + result[0].road_address.address_name + '</div>' : '';
-    //             detailAddr += '<div>지번 주소 : ' + result[0].address.address_name + '</div>';
-                
-    //             var content = '<div class="bAddr">' +
-    //                             '<span class="title">법정동 주소정보</span>' + 
-    //                             detailAddr + 
-    //                         '</div>';
-
-    //             // 마커를 클릭한 위치에 표시합니다 
-    //             marker.setPosition(mouseEvent.latLng);
-    //             marker.setMap(map);
-
-    //             // 인포윈도우에 클릭한 위치에 대한 법정동 상세 주소정보를 표시합니다
-    //             infowindow.setContent(content);
-    //             infowindow.open(map, marker);
-    //         }   
-    //     });
-    // });
-
-    // // 중심 좌표나 확대 수준이 변경됐을 때 지도 중심 좌표에 대한 주소 정보를 표시하도록 이벤트를 등록합니다
-    // kakao.maps.event.addListener(map, 'idle', function() {
-    //     searchAddrFromCoords(map.getCenter(), displayCenterInfo);
-    // });
-
-    // function searchAddrFromCoords(coords, callback) {
-    //     // 좌표로 행정동 주소 정보를 요청합니다
-    //     geocoder.coord2RegionCode(coords.getLng(), coords.getLat(), callback);         
-    // }
-
-    // function searchDetailAddrFromCoords(coords, callback) {
-    //     // 좌표로 법정동 상세 주소 정보를 요청합니다
-    //     geocoder.coord2Address(coords.getLng(), coords.getLat(), callback);
-    // }
-
-    // // 지도 좌측상단에 지도 중심좌표에 대한 주소정보를 표출하는 함수입니다
-    // function displayCenterInfo(result, status) {
-    //     if (status === kakao.maps.services.Status.OK) {
-    //         var infoDiv = document.getElementById('centerAddr');
-
-    //         for(var i = 0; i < result.length; i++) {
-    //             // 행정동의 region_type 값은 'H' 이므로
-    //             if (result[i].region_type === 'H') {
-    //                 infoDiv.innerHTML = result[i].address_name;
-    //                 break;
-    //             }
-    //         }
-    //     }    
-    // }
-    // </script>
-    // </body>
-    // </html>`;
-
-    return (
-        <WebView
-            originWhitelist={['*']}
-            source={{ html: kakaoMapHTML }}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            onMessage={(event) => {
-              // console.log("WebView 메시지 도착:", event.nativeEvent.data);
-              try {
-                const data = JSON.parse(event.nativeEvent.data);
-                onLocationSelect(data);
-              } catch (e) {
-                console.log("디버깅 메시지:", event.nativeEvent.data);
-              }
-            }}
-            style={{ width: "100%", height: 300 }}
-        />
-    );
+  return (
+    <WebView
+      originWhitelist={['*']}
+      source={{ html: googleMapHTML }}
+      javaScriptEnabled={true}
+      domStorageEnabled={true}
+      onMessage={(event) => {
+        try {
+          const data = JSON.parse(event.nativeEvent.data);
+          onLocationSelect(data);
+        } catch (e) {
+          console.log("웹뷰 디버깅 메시지:", event.nativeEvent.data);
+        }
+      }}
+      style={{ width: "100%", height: 300 }}
+    />
+  );
 }

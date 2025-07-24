@@ -1,6 +1,4 @@
-import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ 추가
-import { useState } from "react";
+import React, { useState } from "react";
 import {
     Alert,
     Image,
@@ -10,19 +8,23 @@ import {
     TouchableOpacity,
     View,
     Platform,
+    ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
 } from "react-native";
-import KakaoMapPicker from "./sub_contents/KaKaoMapPicker";
-import { styles } from "../style/PublicPropertyReportStyle";
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+// ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
+import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
 import ChooseDate from "./sub_contents/ChooseDate";
-
-const API_BASE_URL = 'http://192.168.56.1:1234';
+import { styles } from "../style/PublicPropertyReportStyle";
+import { API_BASE_URL } from '../utils/config';
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
     const [detail, setDetail] = useState("");
     const [visible, setVisible] = useState(false);
     const [date, setDate] = useState(null);
-    const [location, setLocation] = useState(null);
+    // ✅ location 상태에 address 필드를 추가합니다.
+    const [location, setLocation] = useState(null); // { lat: number, lng: number, address: string } 형태 예상
     const [modalType, setModalType] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -42,13 +44,17 @@ const PublicPropertyReportScreen = () => {
         }
     };
 
+    // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
     const handleLocation = (coords) => {
+        // coords는 { lat, lng, address } 형태일 것으로 예상됩니다.
         setLocation(coords);
+        setVisible(false); // 위치 선택 후 모달 닫기
     };
 
     const handleSubmitReport = async () => {
-        if (!photo || !location || !date || !detail.trim()) {
-            Alert.alert("알림", "모든 필드를 입력해주세요.");
+        // ✅ location.address가 있는지 확인하는 조건 추가
+        if (!photo || !location || !location.lat || !location.lng || !location.address || !date || !detail.trim()) {
+            Alert.alert("알림", "모든 필드를 입력해주세요. (위치 및 주소 포함)");
             return;
         }
 
@@ -58,6 +64,7 @@ const PublicPropertyReportScreen = () => {
         const token = await AsyncStorage.getItem('auth_token');
         if (!userId || !token) {
             Alert.alert("로그인 필요", "다시 로그인해주세요.");
+            setIsLoading(false); // 로딩 상태 해제
             return;
         }
 
@@ -71,9 +78,12 @@ const PublicPropertyReportScreen = () => {
             name: filename,
             type: fileType,
         });
-        formData.append('location_description', `위도: ${location.lat.toFixed(6)}, 경도: ${location.lng.toFixed(6)}`);
+        // ✅ location_description에 주소 정보 포함
+        formData.append('location_description', `${location.address} (위도: ${location.lat.toFixed(6)}, 경도: ${location.lng.toFixed(6)})`);
         formData.append('latitude', location.lat);
         formData.append('longitude', location.lng);
+        // ✅ 새로운 필드: address (서버에서 이 필드를 받는다고 가정)
+        formData.append('address', location.address);
         formData.append('report_date', date);
         formData.append('details', detail);
         formData.append('user_id', userId);
@@ -82,7 +92,7 @@ const PublicPropertyReportScreen = () => {
             const response = await fetch(`${API_BASE_URL}/registration.write`, {
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`, // ✅ 추가
+                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data',
                     'Accept': 'application/json',
                 },
@@ -92,7 +102,8 @@ const PublicPropertyReportScreen = () => {
             const responseData = await response.json();
 
             if (response.ok) {
-                Alert.alert("신고 성공", responseData.result);
+                Alert.alert("신고 성공", responseData.result || "신고가 성공적으로 등록되었습니다.");
+                // 성공 시 상태 초기화
                 setPhoto(null);
                 setDetail("");
                 setDate(null);
@@ -128,8 +139,14 @@ const PublicPropertyReportScreen = () => {
                 setModalType("map");
                 setVisible(true);
             }}>
+                {/* ✅ location.address를 우선적으로 표시하도록 변경 */}
                 <Text style={styles.submitText}>
-                    {location ? `위도 ${location.lat.toFixed(4)}, 경도 ${location.lng.toFixed(4)}` : "공공기물 위치 선택"}
+                    {location && location.address
+                        ? location.address
+                        : location // 주소는 없지만 위경도는 있을 경우 (오류 대비)
+                        ? `위도 ${location.lat.toFixed(4)}, 경도 ${location.lng.toFixed(4)}`
+                        : "공공기물 위치 선택"
+                    }
                 </Text>
             </TouchableOpacity>
 
@@ -153,19 +170,24 @@ const PublicPropertyReportScreen = () => {
             </View>
 
             <TouchableOpacity style={styles.submitButton} onPress={handleSubmitReport} disabled={isLoading}>
-                <Text style={styles.submitText}>{isLoading ? "등록 중..." : "등록하기"}</Text>
+                {isLoading ? (
+                    <ActivityIndicator color="#fff" /> // 로딩 중일 때 인디케이터 표시
+                ) : (
+                    <Text style={styles.submitText}>등록하기</Text>
+                )}
             </TouchableOpacity>
 
             <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
                 <View style={styles.modalOverlay}>
                     <View style={styles.modalContent}>
                         {modalType === "map" && (
-                            <>
-                                <KakaoMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
-                                <TouchableOpacity style={styles.modalButton} onPress={() => setVisible(false)}>
-                                    <Text style={styles.submitText}>위치 선택 완료</Text>
-                                </TouchableOpacity>
-                            </>
+                            // ✅ KakaoMapPicker 대신 GoogleMapPicker 사용
+                            <GoogleMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
+                            // 위치 선택 완료 버튼은 handleLocation 내부에서 모달을 닫으므로 필요 없습니다.
+                            // 만약 사용자가 지도를 선택하지 않고 닫기만 원한다면 추가할 수 있습니다.
+                            // <TouchableOpacity style={styles.modalButton} onPress={() => setVisible(false)}>
+                            //     <Text style={styles.submitText}>닫기</Text>
+                            // </TouchableOpacity>
                         )}
                         {modalType === "date" && (
                             <ChooseDate onSelect={(selectedDate) => {

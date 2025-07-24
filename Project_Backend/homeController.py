@@ -146,3 +146,14 @@ def infoSpeech2Txt(location: str, type: str, problem: str):
     }
     headers = {"Access-Control-Allow-Origin": "*"}
     return JSONResponse(result, headers=headers)
+
+@app.get("/get_all_damage_reports")
+def getAllDamageReports(): # 
+    """
+    모든 파손 보고서의 위도, 경도, location_description 정보를 조회합니다.
+    DamageMapScreen에서 지도에 마커를 표시하는 데 사용됩니다.
+    """
+    reports = rDAO.getAllDamageReportLocations()
+    if reports is None:
+        raise HTTPException(status_code=500, detail="데이터베이스에서 보고서를 가져오는 데 실패했습니다.")
+    return {"result": reports}

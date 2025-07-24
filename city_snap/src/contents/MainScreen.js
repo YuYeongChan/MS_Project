@@ -22,8 +22,8 @@ function MainScreen() {
 
                 <TouchableOpacity
                     style={main_styles.mapBox}
-                    // onPress={() => navigation.navigate("DamageMapScreen")}
-                    onPress={() => {alert("파손 현황 지도")}}
+                    onPress={() => navigation.navigate("DamageMapScreen")}
+                    // onPress={() => {alert("파손 현황 지도")}}
                 >
                     <Text style={main_styles.mapLabel}>공공기물 파손 현황 지도</Text>
                     <Image
