@@ -123,5 +123,30 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 4,
     ...shadow,
-  }
+  },
+  recordButton: {
+      backgroundColor: "#91c2ebff",
+      borderRadius: 20,
+      width: 170,
+      height: 30,
+      alignItems: 'center',
+      justifyContent: 'center',
+      display: "flex",
+      flexDirection: "row",
+      marginBottom: 20,
+      borderColor: "black",
+      borderWidth: 2,
+      ...shadow,
+  },
+  recordIcon: {
+    width: 28,
+    height: 28,
+    resizeMode: 'contain',
+    marginRight: 5,
+  },
+  recordText: {
+    color: 'black',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 });
