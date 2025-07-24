@@ -2,7 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
+<<<<<<< HEAD
 import { API_BASE_URL } from '../utils/config';
+=======
+>>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
 
 const MyInfoScreen = () => {
   const [userInfo, setUserInfo] = useState(null);

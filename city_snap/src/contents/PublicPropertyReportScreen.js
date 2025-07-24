@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 import React, { useState } from "react";
+=======
+import * as ImagePicker from "expo-image-picker";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Audio } from 'expo-av';
+import { useState, useEffect } from "react";
+>>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
 import {
     Alert,
     Image,
@@ -15,8 +22,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
 import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
 import ChooseDate from "./sub_contents/ChooseDate";
+<<<<<<< HEAD
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
+=======
+>>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
@@ -27,6 +37,20 @@ const PublicPropertyReportScreen = () => {
     const [location, setLocation] = useState(null); // { lat: number, lng: number, address: string } 형태 예상
     const [modalType, setModalType] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isRecording, setIsRecording] = useState(false);
+    const [recording, setRecording] = useState(null);
+    const [audioUri, setAudioUri] = useState(null);
+
+    // 페이지가 열릴 때 오늘 날짜로 기본값 설정
+    useEffect(() => {
+        if (!date) {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            setDate(`${yyyy}-${mm}-${dd}`);
+        }
+    }, [date]);
 
     const pickPhoto = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -121,9 +145,63 @@ const PublicPropertyReportScreen = () => {
         }
     };
 
+    // 음성 녹음 시작
+    const startRecording = async () => {
+        try {
+            // 권한 요청
+            const { status } = await Audio.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
+                return;
+            }
+            await Audio.setAudioModeAsync({
+                allowsRecordingIOS: true,
+                playsInSilentModeIOS: true,
+            });
+            const { recording } = await Audio.Recording.createAsync(
+                Audio.RecordingOptionsPresets.HIGH_QUALITY
+            );
+            setRecording(recording);
+            setIsRecording(true);
+        } catch (err) {
+            Alert.alert('오류', '음성 녹음 시작에 실패했습니다.');
+            setIsRecording(false);
+        }
+    };
+
+    // 음성 녹음 종료
+    const stopRecording = async () => {
+        try {
+            if (!recording) return;
+            await recording.stopAndUnloadAsync();
+            const uri = recording.getURI();
+            setAudioUri(uri);
+            setRecording(null);
+            setIsRecording(false);
+            Alert.alert('녹음 완료', `음성 파일이 저장되었습니다:\n${uri}`);
+        } catch (err) {
+            Alert.alert('오류', '음성 녹음 종료에 실패했습니다.');
+        }
+    };
+
     return (
         <View style={styles.container}>
+
             <Text style={styles.title}>공공기물 파손 등록</Text>
+
+            <TouchableOpacity
+                style={styles.recordButton}
+                onPress={() => {
+                    setModalType("voice");
+                    setVisible(true);
+                }}
+            >
+                <Image
+                    source={require('./img/record_icon.png')}
+                    style={styles.recordIcon}
+                />
+                <Text style={styles.recordText}>AI 음성 등록 서비스</Text>
+            </TouchableOpacity>
 
             <Text style={styles.subtitle}>사진 등록</Text>
             <TouchableOpacity style={styles.photoBox} onPress={pickPhoto}>
@@ -194,6 +272,31 @@ const PublicPropertyReportScreen = () => {
                                 setDate(selectedDate);
                                 setVisible(false);
                             }} />
+                        )}
+                        {modalType === "voice" && (
+                            <View style={styles.voiceModal}>
+                                <Text style={styles.voiceTitle}>AI 음성 등록 서비스</Text>
+                                <Text style={styles.voiceDescription}>음성으로 공공기물 파손 내용을 등록하세요.</Text>
+                                <TouchableOpacity
+                                    style={styles.modalButton}
+                                    onPress={isRecording ? stopRecording : startRecording}
+                                >
+                                    <Text style={styles.submitText}>
+                                        {isRecording ? "녹음 종료" : "음성 녹음 시작"}
+                                    </Text>
+                                </TouchableOpacity>
+                                {audioUri && (
+                                    <Text style={{ marginTop: 10, color: '#333', fontSize: 12 }}>
+                                        파일 저장 위치: {audioUri}
+                                    </Text>
+                                )}
+                                <TouchableOpacity
+                                    style={[styles.modalButton, { marginTop: 10 }]}
+                                    onPress={() => setVisible(false)}
+                                >
+                                    <Text style={styles.submitText}>닫기</Text>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </View>
                 </View>
