@@ -13,9 +13,6 @@ import {
 import * as ImagePicker from "expo-image-picker"; // ImagePicker 임포트
 import { API_BASE_URL } from '../utils/config';
 // --- 중요: Python FastAPI 서버의 기본 URL 설정 ---
-<<<<<<< HEAD
-=======
->>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
 
 const SignUpScreen = ({ navigation }) => {
     const [userId, setUserId] = useState("");

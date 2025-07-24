@@ -1,11 +1,10 @@
-<<<<<<< HEAD
+
 import React, { useState } from "react";
-=======
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { useState, useEffect } from "react";
->>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
+
 import {
     Alert,
     Image,
@@ -22,11 +21,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
 import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
 import ChooseDate from "./sub_contents/ChooseDate";
-<<<<<<< HEAD
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
-=======
->>>>>>> 64fdfd9f621af56e164e61c43406323bf16ca3d5
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
