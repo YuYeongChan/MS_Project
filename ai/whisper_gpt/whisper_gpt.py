@@ -32,6 +32,7 @@ print(TxtResult["text"])
 client = AzureOpenAI(
     azure_endpoint="https://team01-05-4067-resource.openai.azure.com/", # 프로젝트 개요쪽 라이브러리 - Azure OpenAI 엔드포인트
    # 프로젝트 개요쪽 API 키
+     # 프로젝트 개요쪽 API 키
     api_version="2024-12-01-preview", 
 )
 
@@ -58,12 +59,14 @@ res = client.chat.completions.create(
                         "index_name": "ainuri-index", # 아까 저장했던 이름
                         "authentication": {
                             # 따로 ai search리소스 찾아 들어가서 설정 - 키 - 기본 관리자 키
+                            # 따로 ai search리소스 찾아 들어가서 설정 - 키 - 기본 관리자 키
                         },
                         "embedding_dependency": {
                             "type": "endpoint",
                             "endpoint": "https://team01-05-4067-resource.cognitiveservices.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview", # 내 자산 - 모델 + 엔드포인트쪽 대상 URI
                             "authentication": {
                                  # 내 자산 - 모델 + 엔드포인트쪽 키
+                                # 내 자산 - 모델 + 엔드포인트쪽 키
                             },
                         },
                         
