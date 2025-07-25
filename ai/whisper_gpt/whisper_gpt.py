@@ -4,18 +4,24 @@ import sys
 import os
 import requests
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../Project_Backend")))
-from speechToText.speechDAO import SpeechDAO
+
+
+# MS_PROJECT_AINURI 루트 경로 등록
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+# 정확한 경로로 import
+from Project_Backend.speechToText.speechDAO import SpeechDAO
 
 dao = SpeechDAO()
+#######################################################################################3
 
-# 경로 확인 (선택 사항)
-audio_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../ai/whisper_gpt/audioSample.mp3"))
 # 모델 로딩
 model = whisper.load_model("base")  # 성능 따라 다른 모델 선택 가능
 
-# 텍스트 추출
-TxtResult = model.transcribe(audio_path, language="ko")
+# 경로 확인 (선택 사항)
+TxtResult = model.transcribe("uploaded_audios/audioSample.m4a", language="ko")
+
+
 
 # 출력
 print("📝 인식된 텍스트:")
@@ -24,8 +30,8 @@ print(TxtResult["text"])
 #################################################################
 
 client = AzureOpenAI(
-    azure_endpoint="https://team01-05-4067-resource.openai.azure.com/",  # Azure OpenAI 엔드포인트
-     # 🔒 여기에 Azure OpenAI API 키를 입력해야 합니다
+    azure_endpoint="https://team01-05-4067-resource.openai.azure.com/", # 프로젝트 개요쪽 라이브러리 - Azure OpenAI 엔드포인트
+   # 프로젝트 개요쪽 API 키
     api_version="2024-12-01-preview", 
 )
 
@@ -41,33 +47,31 @@ conversation = [{
 userInput = TxtResult["text"]
 conversation.append({"role": "user", "content": userInput})
 res = client.chat.completions.create(
-        model="gpt-4.1",
+        model="gpt-4.1", # ????
         messages=conversation,
         extra_body={
             "data_sources": [
                 {
                     "type": "azure_search",
                     "parameters": {
-                        "endpoint": "https://ainuri-search.search.windows.net",  # Azure Cognitive Search 엔드포인트
-                        "index_name": "ainuri-index",
+                        "endpoint": "https://ainuri-search.search.windows.net", # ai search 개요쪽에 URL
+                        "index_name": "ainuri-index", # 아까 저장했던 이름
                         "authentication": {
-                            # 영어로 "타입" :"에이피아이 키"
-                             # 🔒 여기에 Azure Search Admin Key를 입력해야 합니다
+                            # 따로 ai search리소스 찾아 들어가서 설정 - 키 - 기본 관리자 키
                         },
                         "embedding_dependency": {
                             "type": "endpoint",
-                            "endpoint": "https://team01-05-4067-resource.cognitiveservices.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview",
+                            "endpoint": "https://team01-05-4067-resource.cognitiveservices.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview", # 내 자산 - 모델 + 엔드포인트쪽 대상 URI
                             "authentication": {
-                                # 영어로 "타입" :"에이피아이 키"
-                                  # 🔒 여기에 Azure OpenAI API 키를 입력해야 합니다
+                                 # 내 자산 - 모델 + 엔드포인트쪽 키
                             },
                         },
+                        
                     },
                 }
             ]
         },
     )
-
 reportResult = res.choices[0].message.content
 parsed = dao.parse_report_result(reportResult)
 print("---------------------")
@@ -75,6 +79,8 @@ print("gpt 구조화 ")
 print(reportResult)
 print("---------------------")
 print(parsed)
+
+
 
 # ③ FastAPI로 GET 요청 보내기
 params = {

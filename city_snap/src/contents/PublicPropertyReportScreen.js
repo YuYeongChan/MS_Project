@@ -20,6 +20,11 @@ import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
+import ChooseDate from "./sub_contents/ChooseDate";
+import axios from 'axios'; 
+
+// const API_BASE_URL = 'http://192.168.56.1:1234';
+const API_BASE_URL = 'http://192.168.254.107:1234';
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
@@ -62,6 +67,31 @@ const PublicPropertyReportScreen = () => {
     };
 
     // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
+
+        // 음성 파일 업로드 함수
+
+    const uploadAudioToServer = async (uri) => {
+        const filename = uri.split("/").pop();
+
+        const formData = new FormData();
+        formData.append("file", {
+            uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
+            name: filename,
+            type: "audio/x-m4a",
+        });
+
+        try {
+            const res = await axios.post("http://192.168.254.107:1234/upload_audio", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+            });
+            console.log("업로드 성공:", res.data);
+        } catch (err) {
+            console.error("업로드 실패:", err.message, err.response?.data || err);
+        }
+    };
+
     const handleLocation = (coords) => {
         // coords는 { lat, lng, address } 형태일 것으로 예상됩니다.
         setLocation(coords);
@@ -172,6 +202,9 @@ const PublicPropertyReportScreen = () => {
             setRecording(null);
             setIsRecording(false);
             Alert.alert('녹음 완료', `음성 파일이 저장되었습니다:\n${uri}`);
+            console.log("음성파일:",uri)
+             // ✅ 여기서 서버로 업로드
+            await uploadAudioToServer(uri);
         } catch (err) {
             Alert.alert('오류', '음성 녹음 종료에 실패했습니다.');
         }

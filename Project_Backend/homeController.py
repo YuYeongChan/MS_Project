@@ -8,7 +8,8 @@ from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
-import os
+import os, shutil, subprocess, json
+from fastapi.middleware.cors import CORSMiddleware
 
 # FastAPI 앱 생성
 app = FastAPI()
@@ -157,3 +158,33 @@ def getAllDamageReports(): #
     if reports is None:
         raise HTTPException(status_code=500, detail="데이터베이스에서 보고서를 가져오는 데 실패했습니다.")
     return {"result": reports}
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # 또는 ["http://localhost", "http://192.168.254.107"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+UPLOAD_DIR = "uploaded_audios"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/upload_audio")
+async def upload_audio(file: UploadFile = File(...)):
+    filename = file.filename
+
+    # 안전한 저장 경로 생성
+    save_path = os.path.join(UPLOAD_DIR, filename)
+
+    # 저장
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return JSONResponse({
+        "message": "업로드 성공",
+        "filename": filename,
+        "path": save_path
+    })
