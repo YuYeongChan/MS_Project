@@ -13,9 +13,9 @@ import {
     TouchableOpacity,
     View,
     Platform,
-    ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
+    ActivityIndicator, // 로딩 인디케이터를 위해 추가
 } from "react-native";
-// ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
+// KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
 import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
@@ -26,7 +26,7 @@ const PublicPropertyReportScreen = () => {
     const [detail, setDetail] = useState("");
     const [visible, setVisible] = useState(false);
     const [date, setDate] = useState(null);
-    // ✅ location 상태에 address 필드를 추가합니다.
+    // location 상태에 address 필드를 추가합니다.
     const [location, setLocation] = useState(null); // { lat: number, lng: number, address: string } 형태 예상
     const [modalType, setModalType] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -61,7 +61,7 @@ const PublicPropertyReportScreen = () => {
         }
     };
 
-    // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
+    //  handleLocation 함수가 이제 주소 정보도 함께 받습니다.
     const handleLocation = (coords) => {
         // coords는 { lat, lng, address } 형태일 것으로 예상됩니다.
         setLocation(coords);
@@ -69,7 +69,7 @@ const PublicPropertyReportScreen = () => {
     };
 
     const handleSubmitReport = async () => {
-        // ✅ location.address가 있는지 확인하는 조건 추가
+        //  location.address가 있는지 확인하는 조건 추가
         if (!photo || !location || !location.lat || !location.lng || !location.address || !date || !detail.trim()) {
             Alert.alert("알림", "모든 필드를 입력해주세요. (위치 및 주소 포함)");
             return;
@@ -95,11 +95,11 @@ const PublicPropertyReportScreen = () => {
             name: filename,
             type: fileType,
         });
-        // ✅ location_description에 주소 정보 포함
+        //  location_description에 주소 정보 포함
         formData.append('location_description', `${location.address} (위도: ${location.lat.toFixed(6)}, 경도: ${location.lng.toFixed(6)})`);
         formData.append('latitude', location.lat);
         formData.append('longitude', location.lng);
-        // ✅ 새로운 필드: address (서버에서 이 필드를 받는다고 가정)
+        //  새로운 필드: address (서버에서 이 필드를 받는다고 가정)
         formData.append('address', location.address);
         formData.append('report_date', date);
         formData.append('details', detail);

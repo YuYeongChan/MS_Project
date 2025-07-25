@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, Alert } from "react-native";
 import { WebView } from "react-native-webview";
-// import AsyncStorage from '@react-native-async-storage/async-storage'; // ❌ AsyncStorage 임포트 제거
-import { API_BASE_URL } from '../utils/config'; // ✅ 경로 확인
+// import AsyncStorage from '@react-native-async-storage/async-storage'; //  AsyncStorage 임포트 제거
+import { API_BASE_URL } from '../utils/config'; //  경로 확인
 
 export default function DamageMapScreen() {
     const [damageLocations, setDamageLocations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    // 구글 지도 API 키: AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY
-    const googleMapsApiKey = "AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY"; 
+    
+    const googleMapsApiKey = "AIzaSyDFo43ycPnMtzx6mJU-HbUX71yBtbgpapk"; 
 
     useEffect(() => {
         fetchDamageLocations();
@@ -17,18 +17,7 @@ export default function DamageMapScreen() {
     const fetchDamageLocations = async () => {
         setIsLoading(true);
         try {
-            // const token = await AsyncStorage.getItem('auth_token'); // ❌ 토큰 가져오는 로직 제거
-            // if (!token) { // ❌ 토큰 확인 로직 제거
-            //     Alert.alert("인증 오류", "로그인이 필요합니다.");
-            //     setIsLoading(false);
-            //     return;
-            // }
-
             const response = await fetch(`${API_BASE_URL}/get_all_damage_reports`, {
-                // headers: { // ❌ Authorization 헤더 제거
-                //     'Authorization': `Bearer ${token}`,
-                //     'Accept': 'application/json',
-                // },
             });
 
             const responseData = await response.json();
@@ -36,6 +25,7 @@ export default function DamageMapScreen() {
             if (response.ok) {
                 if (responseData.result && Array.isArray(responseData.result)) {
                     setDamageLocations(responseData.result);
+                    console.log("Received damage locations data:", responseData.result);
                 } else {
                     Alert.alert("데이터 오류", "서버 응답 형식이 올바르지 않습니다.");
                 }

@@ -236,15 +236,19 @@ const SignUpScreen = ({ navigation }) => {
                 Alert.alert("회원가입 성공", responseData.result || "회원가입에 성공했습니다!");
                 console.log("회원가입 성공 데이터:", responseData);
                 navigation.goBack(); 
-            } else {
-                console.error("회원가입 서버 응답 오류 (상태 코드:", response.status, "):", responseData);
-                if (responseData.detail && responseData.detail.includes("UNIQUE constraint")) {
-                    Alert.alert("회원가입 실패", "이미 사용 중인 사용자 ID 또는 닉네임입니다. 다른 정보를 입력해주세요.");
-                } else if (responseData.detail) {
-                    Alert.alert("회원가입 실패", responseData.detail);
-                } else {
-                    Alert.alert("회원가입 실패", responseData.result || "회원가입에 실패했습니다. 다시 시도해주세요.");
+            } else { // response.ok가 false일 때 (409 Conflict인 경우)
+                console.error("회원가입 서버 응답 오류 (상태 코드:", response.status, "):", responseData); // 이 로그가 중요
+                let errorMessage = "회원가입에 실패했습니다. 다시 시도해주세요."; 
+
+                if (responseData.error) { // 이 조건이 false일 가능성이 높음
+                    errorMessage = responseData.error;
+                } else if (responseData.detail) { // 이 조건도 false일 가능성이 높음
+                    errorMessage = responseData.detail;
+                } else if (responseData.result) { // 이 조건이 true여서 errorMessage가 "회원가입 실패"로 설정될 가능성이 높음
+                    errorMessage = responseData.result;
                 }
+
+                Alert.alert("회원가입 실패", errorMessage);
             }
         } catch (error) {
             console.error("네트워크 요청 실패:", error);
