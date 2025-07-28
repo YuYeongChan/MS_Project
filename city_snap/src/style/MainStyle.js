@@ -52,9 +52,8 @@ export const main_styles = StyleSheet.create({
         ...shadow,
     },
     mapImage: {
-        width: 330,
+        width: '90%',
         height: 150,
-        borderRadius: 10,
         marginBottom: 10,
     },
     mapLabel: {
@@ -73,7 +72,7 @@ export const main_styles = StyleSheet.create({
         color: "white",
         fontSize: 14,
         fontWeight: "bold",
-        marginRight: 100,
+        marginRight: '50%',
         marginBottom: 10
     },
     scoreValue: {
@@ -90,14 +89,14 @@ export const main_styles = StyleSheet.create({
         display: "flex",
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 20,
+        gap: '6%',
         marginTop: 10,
     },
     icon: {
         backgroundColor: "#945EE2",
         padding: 12,
         borderRadius: 20,
-        width: 175,
+        width: '47%',
         height: 100,
         display: "flex",
         alignItems: "center",

@@ -10,11 +10,11 @@ const shadow = {
 
 export const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: "#7145C9",
     paddingTop: 70,
     paddingLeft: 25,
     paddingRight: 25,
+    height: '100%',
   },
   title: {
     fontSize: 24,

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -14,6 +13,7 @@ import {
     View,
     Platform,
     ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
+    ScrollView, // 추가
 } from "react-native";
 // ✅ KakaoMapPicker 대신 GoogleMapPicker를 import 합니다.
 import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확히 확인해주세요.
@@ -179,121 +179,119 @@ const PublicPropertyReportScreen = () => {
 
     return (
         <View style={styles.container}>
-
             <Text style={styles.title}>공공기물 파손 등록</Text>
-
-            <TouchableOpacity
-                style={styles.recordButton}
-                onPress={() => {
-                    setModalType("voice");
-                    setVisible(true);
-                }}
+            <ScrollView
+                contentContainerStyle={{ paddingBottom: 40 }}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
             >
-                <Image
-                    source={require('./img/record_icon.png')}
-                    style={styles.recordIcon}
-                />
-                <Text style={styles.recordText}>AI 음성 등록 서비스</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                    style={styles.recordButton}
+                    onPress={() => {
+                        setModalType("voice");
+                        setVisible(true);
+                    }}
+                >
+                    <Image
+                        source={require('./img/record_icon.png')}
+                        style={styles.recordIcon}
+                    />
+                    <Text style={styles.recordText}>AI 음성 등록 서비스</Text>
+                </TouchableOpacity>
 
-            <Text style={styles.subtitle}>사진 등록</Text>
-            <TouchableOpacity style={styles.photoBox} onPress={pickPhoto}>
-                {photo ? (
-                    <Image source={{ uri: photo }} style={styles.photo}
-                        onError={(e) => Alert.alert('오류', '이미지 불러오기 실패')} />
-                ) : (
-                    <Text style={styles.plusIcon}>＋</Text>
-                )}
-            </TouchableOpacity>
+                <Text style={styles.subtitle}>사진 등록</Text>
+                <TouchableOpacity style={styles.photoBox} onPress={pickPhoto}>
+                    {photo ? (
+                        <Image source={{ uri: photo }} style={styles.photo}
+                            onError={(e) => Alert.alert('오류', '이미지 불러오기 실패')} />
+                    ) : (
+                        <Text style={styles.plusIcon}>＋</Text>
+                    )}
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.chooseButton} onPress={() => {
-                setModalType("map");
-                setVisible(true);
-            }}>
-                {/* ✅ location.address를 우선적으로 표시하도록 변경 */}
-                <Text style={styles.submitText}>
-                    {location && location.address
-                        ? location.address
-                        : location // 주소는 없지만 위경도는 있을 경우 (오류 대비)
-                        ? `위도 ${location.lat.toFixed(4)}, 경도 ${location.lng.toFixed(4)}`
-                        : "공공기물 위치 선택"
-                    }
-                </Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.chooseButton} onPress={() => {
+                    setModalType("map");
+                    setVisible(true);
+                }}>
+                    <Text style={styles.submitText}>
+                        {location && location.address
+                            ? location.address
+                            : location
+                            ? `위도 ${location.lat.toFixed(4)}, 경도 ${location.lng.toFixed(4)}`
+                            : "공공기물 위치 선택"
+                        }
+                    </Text>
+                </TouchableOpacity>
 
-            <TouchableOpacity style={styles.chooseButton} onPress={() => {
-                setModalType("date");
-                setVisible(true);
-            }}>
-                <Text style={styles.submitText}>{date || "날짜 선택"}</Text>
-            </TouchableOpacity>
+                <TouchableOpacity style={styles.chooseButton} onPress={() => {
+                    setModalType("date");
+                    setVisible(true);
+                }}>
+                    <Text style={styles.submitText}>{date || "날짜 선택"}</Text>
+                </TouchableOpacity>
 
-            <View style={styles.viewStyle}>
-                <Text style={styles.viewTitle}>상세 내용</Text>
-                <TextInput
-                    style={styles.textArea}
-                    placeholder="파손 내용을 입력하세요"
-                    placeholderTextColor="#777"
-                    value={detail}
-                    onChangeText={setDetail}
-                    multiline
-                />
-            </View>
-
-            <TouchableOpacity style={styles.submitButton} onPress={handleSubmitReport} disabled={isLoading}>
-                {isLoading ? (
-                    <ActivityIndicator color="#fff" /> // 로딩 중일 때 인디케이터 표시
-                ) : (
-                    <Text style={styles.submitText}>등록하기</Text>
-                )}
-            </TouchableOpacity>
-
-            <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
-                <View style={styles.modalOverlay}>
-                    <View style={styles.modalContent}>
-                        {modalType === "map" && (
-                            // ✅ KakaoMapPicker 대신 GoogleMapPicker 사용
-                            <GoogleMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
-                            // 위치 선택 완료 버튼은 handleLocation 내부에서 모달을 닫으므로 필요 없습니다.
-                            // 만약 사용자가 지도를 선택하지 않고 닫기만 원한다면 추가할 수 있습니다.
-                            // <TouchableOpacity style={styles.modalButton} onPress={() => setVisible(false)}>
-                            //     <Text style={styles.submitText}>닫기</Text>
-                            // </TouchableOpacity>
-                        )}
-                        {modalType === "date" && (
-                            <ChooseDate onSelect={(selectedDate) => {
-                                setDate(selectedDate);
-                                setVisible(false);
-                            }} />
-                        )}
-                        {modalType === "voice" && (
-                            <View style={styles.voiceModal}>
-                                <Text style={styles.voiceTitle}>AI 음성 등록 서비스</Text>
-                                <Text style={styles.voiceDescription}>음성으로 공공기물 파손 내용을 등록하세요.</Text>
-                                <TouchableOpacity
-                                    style={styles.modalButton}
-                                    onPress={isRecording ? stopRecording : startRecording}
-                                >
-                                    <Text style={styles.submitText}>
-                                        {isRecording ? "녹음 종료" : "음성 녹음 시작"}
-                                    </Text>
-                                </TouchableOpacity>
-                                {audioUri && (
-                                    <Text style={{ marginTop: 10, color: '#333', fontSize: 12 }}>
-                                        파일 저장 위치: {audioUri}
-                                    </Text>
-                                )}
-                                <TouchableOpacity
-                                    style={[styles.modalButton, { marginTop: 10 }]}
-                                    onPress={() => setVisible(false)}
-                                >
-                                    <Text style={styles.submitText}>닫기</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </View>
+                <View style={styles.viewStyle}>
+                    <Text style={styles.viewTitle}>상세 내용</Text>
+                    <TextInput
+                        style={styles.textArea}
+                        placeholder="파손 내용을 입력하세요"
+                        placeholderTextColor="#777"
+                        value={detail}
+                        onChangeText={setDetail}
+                        multiline
+                    />
                 </View>
-            </Modal>
+
+                <TouchableOpacity style={styles.submitButton} onPress={handleSubmitReport} disabled={isLoading}>
+                    {isLoading ? (
+                        <ActivityIndicator color="#fff" /> // 로딩 중일 때 인디케이터 표시
+                    ) : (
+                        <Text style={styles.submitText}>등록하기</Text>
+                    )}
+                </TouchableOpacity>
+
+                <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalContent}>
+                            {modalType === "map" && (
+                                // ✅ KakaoMapPicker 대신 GoogleMapPicker 사용
+                                <GoogleMapPicker style={styles.modalMap} onLocationSelect={handleLocation} />
+                            )}
+                            {modalType === "date" && (
+                                <ChooseDate onSelect={(selectedDate) => {
+                                    setDate(selectedDate);
+                                    setVisible(false);
+                                }} />
+                            )}
+                            {modalType === "voice" && (
+                                <View style={styles.voiceModal}>
+                                    <Text style={styles.voiceTitle}>AI 음성 등록 서비스</Text>
+                                    <Text style={styles.voiceDescription}>음성으로 공공기물 파손 내용을 등록하세요.</Text>
+                                    <TouchableOpacity
+                                        style={styles.modalButton}
+                                        onPress={isRecording ? stopRecording : startRecording}
+                                    >
+                                        <Text style={styles.submitText}>
+                                            {isRecording ? "녹음 종료" : "음성 녹음 시작"}
+                                        </Text>
+                                    </TouchableOpacity>
+                                    {audioUri && (
+                                        <Text style={{ marginTop: 10, color: '#333', fontSize: 12 }}>
+                                            파일 저장 위치: {audioUri}
+                                        </Text>
+                                    )}
+                                    <TouchableOpacity
+                                        style={[styles.modalButton, { marginTop: 10 }]}
+                                        onPress={() => setVisible(false)}
+                                    >
+                                        <Text style={styles.submitText}>닫기</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                </Modal>
+            </ScrollView>
         </View>
     );
 };

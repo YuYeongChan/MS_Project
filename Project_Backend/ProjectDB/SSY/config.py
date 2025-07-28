@@ -1,2 +1,2 @@
 # Oracle DB 접속 정보
-ORACLE_URL = "Ssy/qwer1234@195.168.9.68:1521/xe"
+ORACLE_URL = "Ssy/qwer1234@180.80.107.6:9876/xe"

@@ -2,13 +2,11 @@ import React, { useState, useEffect } from "react";
 import { View, Text, ActivityIndicator, StyleSheet, Alert } from "react-native";
 import { WebView } from "react-native-webview";
 // import AsyncStorage from '@react-native-async-storage/async-storage'; // ❌ AsyncStorage 임포트 제거
-import { API_BASE_URL } from '../utils/config'; // ✅ 경로 확인
+import { API_BASE_URL, googleMapsApiKey } from '../utils/config'; // ✅ 경로 확인
 
 export default function DamageMapScreen() {
     const [damageLocations, setDamageLocations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    // 구글 지도 API 키: AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY
-    const googleMapsApiKey = "AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY"; 
 
     useEffect(() => {
         fetchDamageLocations();
