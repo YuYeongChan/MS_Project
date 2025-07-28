@@ -116,7 +116,7 @@ export const styles = StyleSheet.create({
     height: '70%',
   },
   modalButton: {
-    backgroundColor: "#2296F3",
+    backgroundColor: "#945EE2",
     borderRadius: 20,
     marginTop: 10,
     height: 35,
@@ -125,7 +125,7 @@ export const styles = StyleSheet.create({
     ...shadow,
   },
   recordButton: {
-      backgroundColor: "#91c2ebff",
+      backgroundColor: "#945EE2",
       borderRadius: 20,
       width: 170,
       height: 30,
@@ -149,4 +149,20 @@ export const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  locationAddressText: {
+  backgroundColor: "#945EE2",     // 보라색 배경
+  borderRadius: 20,
+  borderWidth: 2,
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  marginTop: 10,
+  marginBottom: 10,
+  alignSelf: 'center',
+  textAlign: 'center',
+  color: "white",
+  fontSize: 14,
+  fontWeight: 'bold',
+  ...shadow,
+}
+  
 });

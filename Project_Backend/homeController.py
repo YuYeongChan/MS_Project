@@ -1,19 +1,27 @@
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File
+from fastapi import FastAPI, Form, UploadFile, HTTPException, File,BackgroundTasks,APIRouter
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
-import os
+import os, shutil, subprocess, json
+
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../ai")))
+from whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
+
 
 # FastAPI 앱 생성
 app = FastAPI()
 # 서버 루트 기준 상대 경로 (이미 프로필 사진이 여기에 저장되고 있음)
 profile_photo_folder = os.path.join(os.path.dirname(__file__), 'profile_photos')
+
+router = APIRouter()
+
 
 # 폴더가 없다면 생성
 os.makedirs(profile_photo_folder, exist_ok=True)
@@ -133,7 +141,22 @@ def addManagementStatus(
 @app.get("/management.status.list")
 def getManagementStatusList():
     return msDAO.getAllStatuses()
+@app.get("/get_user_info/{user_id}")
+def get_user_info(user_id: str):
+    """
+    사용자 ID를 받아 해당 사용자의 주소를 반환합니다.
+    주소는 지도 중심 설정에 사용됩니다.
+    """
+    try:
+        user_info = aDAO.getUserInfo(user_id)  # user_id 기준으로 DB 조회
+        if not user_info:
+            return JSONResponse(status_code=404, content={"error": "해당 사용자를 찾을 수 없습니다."})
+        
+        address = user_info.get("address")  # dict로 반환된 경우
+        return {"address": address}
 
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 
@@ -157,3 +180,58 @@ def getAllDamageReports(): #
     if reports is None:
         raise HTTPException(status_code=500, detail="데이터베이스에서 보고서를 가져오는 데 실패했습니다.")
     return {"result": reports}
+
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],           # 또는 ["http://localhost", "http://192.168.254.107"]
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+
+UPLOAD_DIR = "uploaded_audios"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+@app.post("/upload_audio")
+async def upload_audio(file: UploadFile = File(...)):
+    filename = file.filename
+    save_path = os.path.join(UPLOAD_DIR, filename)
+
+    # 1. 파일 저장
+    with open(save_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    # 2. Whisper + GPT 구조화 실행
+    try:
+        structured_result = process_audio_and_get_structured_data(save_path)
+    except Exception as e:
+        print("❌ 구조화 중 오류 발생:", e)
+        return JSONResponse(
+            status_code=500,
+            content={
+                "message": "Whisper + GPT 구조화 실패",
+                "error": str(e)
+            }
+        )
+    # 3. 클라이언트에 파일 정보 + 구조화 결과 응답
+    return JSONResponse({
+        "message": "업로드 및 구조화 성공",
+        "filename": filename,
+        "path": save_path,
+        "result": structured_result  # 👈 React Native에서 이걸 받아서 detail 입력란에 사용
+    })
+
+
+
+@router.get("/analyze_audio")
+async def analyze_audio(filename: str):
+    path = os.path.join("uploaded_audios", filename)
+    if not os.path.exists(path):
+        return {"error": "파일이 존재하지 않음"}
+
+    result = process_audio_and_get_structured_data(path)
+    return result
