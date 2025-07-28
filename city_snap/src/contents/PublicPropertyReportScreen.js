@@ -10,6 +10,8 @@ import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
+import axios from 'axios'; 
+
 import axios from 'axios';
 
 const PublicPropertyReportScreen = () => {
@@ -151,6 +153,40 @@ const PublicPropertyReportScreen = () => {
     }
   };
 
+    // 음성 녹음 종료
+    const stopRecording = async () => {
+        console.log("녹음 중지 요청");
+
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setAudioUri(uri);
+
+        console.log(" 녹음 완료, URI:", uri);
+        console.log("서버에 업로드 요청 시작");
+
+        const formData = new FormData();
+        formData.append("file", {
+            uri: uri,
+            name: "recording.m4a",
+            type: "audio/m4a",
+        });
+
+        axios.post(`${API_BASE_URL}/upload_audio`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        })
+        .then((res) => {
+        const result = res.data.result;
+
+        // ✅ 위치만 별도로 추출해서 location에 자동 채움
+        setLocation(result["장소"]);
+
+        // ✅ 기물 종류 + 문제 사유를 합쳐서 내용란에 채움
+        const combinedDetail =
+            `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
+
+        setDetail(combinedDetail);
+        });
+}
   const stopRecording = async () => {
     try {
       if (!recording) return;
