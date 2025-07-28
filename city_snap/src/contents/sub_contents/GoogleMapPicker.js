@@ -3,7 +3,7 @@ import { WebView } from "react-native-webview";
 
 export default function GoogleMapPicker({ onLocationSelect }) {
   // ** 중요: 'YOUR_Maps_API_KEY' 부분을 실제 구글 지도 API 키로 교체하세요. **
-  const googleMapsApiKey = "AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY"; // 이곳에 본인의 API 키를 입력하세요.
+  const googleMapsApiKey = ""; // 이곳에 본인의 API 키를 입력하세요.
 
   const googleMapHTML = `
     <!DOCTYPE html>

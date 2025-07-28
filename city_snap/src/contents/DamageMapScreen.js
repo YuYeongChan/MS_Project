@@ -1,31 +1,38 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, ActivityIndicator, StyleSheet, Alert } from "react-native";
+import { 
+    View, 
+    Text, 
+    ActivityIndicator, 
+    StyleSheet, 
+    Alert, 
+    TouchableOpacity, 
+    Platform, 
+} from "react-native";
 import { WebView } from "react-native-webview";
-// import AsyncStorage from '@react-native-async-storage/async-storage'; //  AsyncStorage 임포트 제거
-import { API_BASE_URL } from '../utils/config'; //  경로 확인
+import { API_BASE_URL } from '../utils/config';
+import { useNavigation } from "@react-navigation/native"; 
 
 export default function DamageMapScreen() {
     const [damageLocations, setDamageLocations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     
-    const googleMapsApiKey = "AIzaSyDFo43ycPnMtzx6mJU-HbUX71yBtbgpapk"; 
+    const googleMapsApiKey = ""; 
+
+    const navigation = useNavigation(); 
 
     useEffect(() => {
         fetchDamageLocations();
     }, []);
 
-    const fetchDamageLocations = async () => {
+    const fetchDamageLocations = async () => { /* ... 기존 코드 유지 ... */
         setIsLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/get_all_damage_reports`, {
-            });
-
+            const response = await fetch(`${API_BASE_URL}/get_all_damage_reports`, {});
             const responseData = await response.json();
-
             if (response.ok) {
                 if (responseData.result && Array.isArray(responseData.result)) {
                     setDamageLocations(responseData.result);
-                    console.log("Received damage locations data:", responseData.result);
+                    console.log("Received damage locations data:", responseData.result); 
                 } else {
                     Alert.alert("데이터 오류", "서버 응답 형식이 올바르지 않습니다.");
                 }
@@ -40,8 +47,7 @@ export default function DamageMapScreen() {
         }
     };
 
-    // generateMapHtml 함수는 변경 없음 (제공해주신 코드 그대로)
-    const generateMapHtml = (locations) => {
+    const generateMapHtml = (locations) => { /* ... 기존 코드 유지 ... */
         const locationsArrayString = JSON.stringify(locations.map(loc => ({
             lat: loc.latitude,
             lng: loc.longitude,
@@ -71,7 +77,7 @@ export default function DamageMapScreen() {
                   try {
                     map = new google.maps.Map(document.getElementById('map'), {
                       center: new google.maps.LatLng(37.5665, 126.9780),
-                      zoom: 12,
+                      zoom: 25,
                       disableDefaultUI: false
                     });
 
@@ -131,20 +137,88 @@ export default function DamageMapScreen() {
                         console.log("웹뷰 메시지:", event.nativeEvent.data);
                     }}
                     style={styles.webView}
+                    // ✅ WebView가 터치 이벤트를 완전히 막지 않도록 pointerEvents 설정 (옵션)
+                    // 이 경우 지도를 조작할 수 없게 되므로, 지도 위에 버튼만 있다면 고려.
+                    // pointerEvents="none" 
                 />
             ) : (
                 <View style={styles.noDataContainer}>
                     <Text style={styles.noDataText}>등록된 파손 현황이 없습니다.</Text>
                 </View>
             )}
+
+            {/* ✅ 지도 닫기 버튼을 별도의 absolute View로 감싸고 zIndex를 명확히 함 */}
+            <View style={styles.closeButtonContainer}>
+                <TouchableOpacity 
+                    style={styles.closeMapButton} 
+                    onPress={() => {
+                        console.log("닫기 버튼 눌림!"); 
+                        console.log("뒤로 갈 수 있는지:", navigation.canGoBack()); 
+
+                        if (navigation.canGoBack()) {
+                            navigation.goBack(); 
+                        } else {
+                            Alert.alert("알림", "더 이상 뒤로 갈 화면이 없습니다. (내비게이션 스택 문제)");
+                            console.log("내비게이션 스택에 뒤로 갈 화면이 없습니다.");
+                        }
+                    }}
+                >
+                    <Text style={styles.closeButtonText}>지도 닫기</Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1 },
-    loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    noDataContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    noDataText: { fontSize: 18, color: '#555' },
-    webView: { flex: 1 }
+    container: { 
+        flex: 1,
+        position: 'relative', // 자식 요소의 absolute positioning 기준
+    },
+    loadingContainer: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    noDataContainer: { 
+        flex: 1, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    noDataText: { 
+        fontSize: 18, 
+        color: '#555' 
+    },
+    webView: { 
+        flex: 1 
+    },
+    //  닫기 버튼 컨테이너 스타일 추가
+    closeButtonContainer: { 
+        position: 'absolute',
+        top: 50, // 기존보다 숫자를 높이면 아래로 내려갑니다
+        right: 20,
+        zIndex: 100, // ✅ WebView보다 훨씬 높은 zIndex로 설정
+        // 디버깅을 위해 배경색과 크기를 임시로 설정하여 시각적으로 확인해볼 수 있습니다.
+        // backgroundColor: 'rgba(255,0,0,0.5)', 
+        // width: 100,
+        // height: 40,
+    },
+    closeMapButton: {
+        backgroundColor: 'rgba(0,0,0,0.6)', 
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 10,
+        // zIndex는 이제 부모 컨테이너에 있으므로 여기서는 필수는 아님
+        // zIndex: 10, 
+        elevation: 5, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    },
+    closeButtonText: {
+        color: 'white',
+        fontWeight: 'bold',
+        fontSize: 14,
+    }
 });

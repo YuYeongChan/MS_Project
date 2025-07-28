@@ -56,20 +56,26 @@ class AccountDAO:
                 with open(file_path, "wb") as f:
                     f.write(profile_pic.file.read())
                 
-                profile_pic_url_for_db = f"/profile_photos/{profile_pic_filename}"
+                # profile_pic_url_for_db = f"/profile_photos/{profile_pic_filename}" 
+                profile_pic_url_for_db = profile_pic_filename # 파일명만 저장
             else:
                 profile_pic_url_for_db = None
 
         except Exception as e:
             print(f"프로필 사진 저장 실패 (파일 시스템): {str(e)}")
-            # ✅ status_code 추가
+            #  status_code 추가
             return JSONResponse({"result": "회원가입 실패", "error": f"프로필 사진 저장 중 오류: {e}"}, status_code=500, headers=h)
         
         try:
             con, cur = SsyDBManager.makeConCur()
             
             hashed_password = self.hash_password(password)
+
+            # 여기 추가: 주민등록번호 암호화 전/후 값 확인
+            print(f"DEBUG: Plain resident_id_number: {resident_id_number}")
             encrypted_resident_id_number = self.encrypt_resident_id_number(resident_id_number)
+            print(f"DEBUG: Encrypted resident_id_number: {encrypted_resident_id_number}")
+
 
             sql = """
                 INSERT INTO Users (
@@ -80,6 +86,9 @@ class AccountDAO:
                     :phone_number, :address, :resident_id_number, 0 
                 )
             """ 
+            # 여기 추가: SQL 쿼리 및 파라미터 확인
+            print(f"DEBUG: SQL query for signUp: {sql}")
+            print(f"DEBUG: SQL params for signUp: {{'user_id': {user_id}, ..., 'resident_id_number': {encrypted_resident_id_number}}}") # 다른 파라미터도 포함하여 출력
             cur.execute(sql, {
                 'user_id': user_id,
                 'password': hashed_password,
@@ -91,7 +100,7 @@ class AccountDAO:
                 'resident_id_number': encrypted_resident_id_number 
             })
             con.commit()
-            # ✅ status_code 추가
+            #  status_code 추가
             return JSONResponse({"result": "회원가입 성공"}, status_code=200, headers=h)
         except Exception as e:
             if con: con.rollback()
@@ -110,24 +119,27 @@ class AccountDAO:
                 constraint_match = re.search(r'\(SSY\.([A-Z0-9_]+)\)', error_message)
                 constraint_name = constraint_match.group(1) if constraint_match else ""
 
+                #  여기 추가: 어떤 제약조건이 위배되었는지 정확히 로그에 남김
+                print(f"DEBUG: Violated Constraint Name: {constraint_name}")
+
                 if "USERS_USER_ID_UK" in constraint_name or "USER_ID" in constraint_name:
-                    # ✅ status_code 추가
+                    #  status_code 추가
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 존재하는 사용자 ID입니다."}, status_code=409, headers=h)
                 elif "USERS_NICKNAME_UK" in constraint_name or "NICKNAME" in constraint_name:
-                    # ✅ status_code 추가
+                    # status_code 추가
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 존재하는 닉네임입니다."}, status_code=409, headers=h)
-                elif "SYS_C0024095" in constraint_name: # ✅ status_code 추가
+                elif "SYS_C0024095" in constraint_name: #  status_code 추가
                     # 이 제약조건 이름은 DB마다 다를 수 있으므로 DDL에 명시적 이름 부여 권장
+                    return JSONResponse({"result": "회원가입 실패", "error": "이미 등록된 전화번호입니다"}, status_code=409, headers=h)
+                elif "SYS_C0024091" in constraint_name or "PHONE_NUMBER" in constraint_name:
+                    #  status_code 추가
                     return JSONResponse({"result": "회원가입 실패", "error": "이미 등록된 주민등록번호입니다."}, status_code=409, headers=h)
-                elif "USERS_PHONE_NUMBER_UK" in constraint_name or "PHONE_NUMBER" in constraint_name:
-                    # ✅ status_code 추가
-                    return JSONResponse({"result": "회원가입 실패", "error": "이미 등록된 전화번호입니다."}, status_code=409, headers=h)
                 else: 
-                    # ✅ status_code 추가
+                    #  status_code 추가
                     return JSONResponse({"result": "회원가입 실패", "error": f"중복된 정보가 있습니다: {constraint_name}"}, status_code=409, headers=h)
             
             # ORA-00001이 아닌 다른 DB 오류
-            # ✅ status_code 추가
+            #  status_code 추가
             return JSONResponse({"result": "회원가입 실패", "error": f"알 수 없는 DB 오류: {e}"}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
@@ -162,15 +174,15 @@ class AccountDAO:
                         "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                     }
                     token = jwt.encode(payload, self.jwtKey, self.jwtAlgorithm)
-                    # ✅ status_code 추가
+                    #  status_code 추가
                     return JSONResponse({"result": "로그인 성공", "token": token}, status_code=200, headers=h)
-                # ✅ status_code 추가
+                #  status_code 추가
                 return JSONResponse({"result": "로그인 실패: 비밀번호 불일치"}, status_code=401, headers=h)
-            # ✅ status_code 추가
+            #  status_code 추가
             return JSONResponse({"result": "로그인 실패: 사용자 ID 없음"}, status_code=404, headers=h)
         except Exception as e:
             print(f"로그인 중 오류 발생: {e}")
-            # ✅ status_code 추가
+            #  status_code 추가
             return JSONResponse({"result": f"로그인 DB 오류: {e}"}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
@@ -192,6 +204,7 @@ class AccountDAO:
             return False 
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
+    
 
     #---id 중복 확인 메서드 추가
     def checkUserIdDuplicate(self, user_id: str) -> bool:
@@ -208,3 +221,5 @@ class AccountDAO:
             return False 
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
+    
+    
