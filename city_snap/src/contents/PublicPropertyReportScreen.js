@@ -20,11 +20,8 @@ import GoogleMapPicker from "./sub_contents/KaKaoMapPicker"; // 경로를 정확
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
-import ChooseDate from "./sub_contents/ChooseDate";
 import axios from 'axios'; 
 
-// const API_BASE_URL = 'http://192.168.56.1:1234';
-const API_BASE_URL = 'http://192.168.254.107:1234';
 
 const PublicPropertyReportScreen = () => {
     const [photo, setPhoto] = useState(null);
@@ -194,21 +191,38 @@ const PublicPropertyReportScreen = () => {
 
     // 음성 녹음 종료
     const stopRecording = async () => {
-        try {
-            if (!recording) return;
-            await recording.stopAndUnloadAsync();
-            const uri = recording.getURI();
-            setAudioUri(uri);
-            setRecording(null);
-            setIsRecording(false);
-            Alert.alert('녹음 완료', `음성 파일이 저장되었습니다:\n${uri}`);
-            console.log("음성파일:",uri)
-             // ✅ 여기서 서버로 업로드
-            await uploadAudioToServer(uri);
-        } catch (err) {
-            Alert.alert('오류', '음성 녹음 종료에 실패했습니다.');
-        }
-    };
+        console.log("녹음 중지 요청");
+
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setAudioUri(uri);
+
+        console.log(" 녹음 완료, URI:", uri);
+        console.log("서버에 업로드 요청 시작");
+
+        const formData = new FormData();
+        formData.append("file", {
+            uri: uri,
+            name: "recording.m4a",
+            type: "audio/m4a",
+        });
+
+        axios.post(`${API_BASE_URL}/upload_audio`, formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        })
+        .then((res) => {
+        const result = res.data.result;
+
+        // ✅ 위치만 별도로 추출해서 location에 자동 채움
+        setLocation(result["장소"]);
+
+        // ✅ 기물 종류 + 문제 사유를 합쳐서 내용란에 채움
+        const combinedDetail =
+            `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
+
+        setDetail(combinedDetail);
+        });
+}
 
     return (
         <View style={styles.container}>

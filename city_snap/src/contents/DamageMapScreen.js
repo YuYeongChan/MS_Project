@@ -8,7 +8,7 @@ export default function DamageMapScreen() {
     const [damageLocations, setDamageLocations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     // 구글 지도 API 키: AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY
-    const googleMapsApiKey = "AIzaSyAUQVbtDfCPDFBLxuHQ4pMfbomCW_4EizY"; 
+    const googleMapsApiKey = "AIzaSyDGYOTS7sz5Y9KnDAFy7ENvMO309nw7nng"; 
 
     useEffect(() => {
         fetchDamageLocations();
