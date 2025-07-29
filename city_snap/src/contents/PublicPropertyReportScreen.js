@@ -24,6 +24,7 @@ import axios from 'axios';
 
 
 const PublicPropertyReportScreen = () => {
+      const googleMapsApiKey = "AIzaSyDGYOTS7sz5Y9KnDAFy7ENvMO309nw7nng"
     const [photo, setPhoto] = useState(null);
     const [detail, setDetail] = useState("");
     const [visible, setVisible] = useState(false);
@@ -65,29 +66,6 @@ const PublicPropertyReportScreen = () => {
 
     // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
 
-        // 음성 파일 업로드 함수
-
-    const uploadAudioToServer = async (uri) => {
-        const filename = uri.split("/").pop();
-
-        const formData = new FormData();
-        formData.append("file", {
-            uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
-            name: filename,
-            type: "audio/x-m4a",
-        });
-
-        try {
-            const res = await axios.post("http://192.168.254.107:1234/upload_audio", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            });
-            console.log("업로드 성공:", res.data);
-        } catch (err) {
-            console.error("업로드 실패:", err.message, err.response?.data || err);
-        }
-    };
 
     const handleLocation = (coords) => {
         // coords는 { lat, lng, address } 형태일 것으로 예상됩니다.
@@ -207,20 +185,32 @@ const PublicPropertyReportScreen = () => {
             type: "audio/m4a",
         });
 
-        axios.post(`${API_BASE_URL}/upload_audio`, formData, {
+        axios.post("http://195.168.9.64:1234/upload_audio", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         })
         .then((res) => {
-        const result = res.data.result;
+            const result = res.data.result;
 
-        // ✅ 위치만 별도로 추출해서 location에 자동 채움
-        setLocation(result["장소"]);
+            if (typeof result["장소"] === "string") {
+                fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(result["장소"])}&key=${googleMapsApiKey}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === "OK") {
+                            const loc = data.results[0].geometry.location;
+                            setLocation({
+                                address: result["장소"],
+                                lat: loc.lat,
+                                lng: loc.lng
+                            });
+                        }
+                    });
+            } else {
+                setLocation(result["장소"]);
+            }
 
-        // ✅ 기물 종류 + 문제 사유를 합쳐서 내용란에 채움
-        const combinedDetail =
-            `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
-
-        setDetail(combinedDetail);
+            const combinedDetail =
+                `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
+            setDetail(combinedDetail);
         });
 }
 
@@ -346,3 +336,6 @@ const PublicPropertyReportScreen = () => {
 };
 
 export default PublicPropertyReportScreen;
+
+
+

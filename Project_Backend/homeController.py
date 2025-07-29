@@ -184,7 +184,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 @app.post("/upload_audio")
 async def upload_audio(file: UploadFile = File(...)):
     filename = file.filename
-    save_path = os.path.join(UPLOAD_DIR, filename)
+    save_path = os.path.join("uploaded_audios", filename)
+    save_path = os.path.abspath(save_path)  # ✅ 절대경로로 변환!
 
     # 1. 파일 저장
     with open(save_path, "wb") as buffer:
