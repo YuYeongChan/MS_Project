@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
 import os, shutil, subprocess, json
-from fastapi.middleware.cors import CORSMiddleware
 
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../ai")))
@@ -142,7 +141,22 @@ def addManagementStatus(
 @app.get("/management.status.list")
 def getManagementStatusList():
     return msDAO.getAllStatuses()
+@app.get("/get_user_info/{user_id}")
+def get_user_info(user_id: str):
+    """
+    사용자 ID를 받아 해당 사용자의 주소를 반환합니다.
+    주소는 지도 중심 설정에 사용됩니다.
+    """
+    try:
+        user_info = aDAO.getUserInfo(user_id)  # user_id 기준으로 DB 조회
+        if not user_info:
+            return JSONResponse(status_code=404, content={"error": "해당 사용자를 찾을 수 없습니다."})
+        
+        address = user_info.get("address")  # dict로 반환된 경우
+        return {"address": address}
 
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 
@@ -166,6 +180,7 @@ def getAllDamageReports(): #
     if reports is None:
         raise HTTPException(status_code=500, detail="데이터베이스에서 보고서를 가져오는 데 실패했습니다.")
     return {"result": reports}
+
 
 
 app.add_middleware(
