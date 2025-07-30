@@ -153,36 +153,43 @@ class AccountDAO:
             sql = """
                 SELECT 
                     password, profile_pic_url, nickname, name, 
-                    phone_number, address, resident_id_number, score 
+                    phone_number, address, resident_id_number, score,
+                    is_admin
                 FROM Users
                 WHERE user_id = :user_id
             """ 
             cur.execute(sql, {'user_id': user_id})
-            
             result = cur.fetchone() 
 
             if result:
-                hashed_password_db, profile_pic_url, nickname, name, phone_number, address, encrypted_resident_id_number, score = result 
+                (hashed_password_db, profile_pic_url, nickname, name, 
+                 phone_number, address, encrypted_resident_id_number, 
+                 score, is_admin) = result 
                 
                 if self.verify_password(password, hashed_password_db):
                     decrypted_resident_id_number = self.decrypt_resident_id_number(encrypted_resident_id_number)
                     
                     payload = {
-                        "user_id": user_id, "nickname": nickname, "name": name, "address": address,
-                        "resident_id_number": decrypted_resident_id_number, "score": score,
-                        "profile_pic_url": profile_pic_url, "phone_number": phone_number,      
+                        "user_id": user_id,
+                        "nickname": nickname,
+                        "name": name,
+                        "address": address,
+                        "resident_id_number": decrypted_resident_id_number,
+                        "score": score,
+                        "profile_pic_url": profile_pic_url,
+                        "phone_number": phone_number,
+                        "role": "admin" if int(is_admin) == 1 else "user",  #  role 추가
                         "exp": datetime.now(timezone.utc) + timedelta(hours=1),
                     }
                     token = jwt.encode(payload, self.jwtKey, self.jwtAlgorithm)
-                    #  status_code 추가
                     return JSONResponse({"result": "로그인 성공", "token": token}, status_code=200, headers=h)
-                #  status_code 추가
+
                 return JSONResponse({"result": "로그인 실패: 비밀번호 불일치"}, status_code=401, headers=h)
-            #  status_code 추가
+
             return JSONResponse({"result": "로그인 실패: 사용자 ID 없음"}, status_code=404, headers=h)
+
         except Exception as e:
             print(f"로그인 중 오류 발생: {e}")
-            #  status_code 추가
             return JSONResponse({"result": f"로그인 DB 오류: {e}"}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)

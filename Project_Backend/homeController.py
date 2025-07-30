@@ -1,18 +1,28 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File,BackgroundTasks,APIRouter
+from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTasks, APIRouter # APIRouter 임포트 유지
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
-from fastapi.middleware.cors import CORSMiddleware # <<< 이 줄을 추가해주세요!
+from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
-import os, shutil, subprocess, json
+import shutil # shutil 임포트 유지
+import json # json 임포트 유지
+from datetime import datetime, timedelta
+import jwt
 
+SECRET_KEY = "YOUR_SECRET_KEY"
+ALGORITHM = "HS256"
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../ai")))
-from whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
+# `homeController.py`가 있는 `Project_Backend` 폴더의 부모 디렉토리 (MS_PROJECT_AINURI)를 sys.path에 추가합니다.
+# 이렇게 하면 'ai' 폴더를 직접 패키지처럼 임포트할 수 있습니다.
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) 
+
+# 올바른 임포트 구문: 'ai' 패키지에서 함수를 가져옵니다.
+from ai.whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
+
+# router = APIRouter() #  APIRouter는 필요시 app.include_router()와 함께 사용
 
 
 # FastAPI 앱 생성
@@ -30,7 +40,6 @@ os.makedirs(profile_photo_folder, exist_ok=True)
 app.mount("/profile_photos", StaticFiles(directory=profile_photo_folder), name="profile_photos")
 from fastapi.responses import JSONResponse
 # ex ) http://195.168.9.232:1234/computer.get?page=1
-# ex ) http://192.168.56.1:1234//account.sign.up
 # uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
 # ip 주소 계속 바뀜 :195.168.9.69
 
@@ -84,11 +93,8 @@ def accountSignUp(
 
 # 로그인 API 엔드포인트
 @app.post("/account.sign.in")
-def accountSignIn(
-    user_id: str = Form(...),
-    password: str = Form(...)
-):
-    return aDAO.signIn(user_id, password)
+def accountSignIn(user_id: str = Form(...), password: str = Form(...)):
+    return aDAO.signIn(user_id, password)  # JWT 발급은 DAO에서 처리
 
 @app.get("/account.check.nickname")
 def checkNickname(nickname: str):

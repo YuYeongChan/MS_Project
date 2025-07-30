@@ -20,7 +20,7 @@ client = AzureOpenAI(
     api_version="2024-12-01-preview",
 )
 
-# ✅ 핵심 함수 정의
+#  핵심 함수 정의
 def process_audio_and_get_structured_data(audio_path: str) -> dict:
     # 1. Whisper 텍스트 추출
     TxtResult = model.transcribe(audio_path, language="ko")

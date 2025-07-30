@@ -11,11 +11,13 @@ import {
 import { WebView } from "react-native-webview";
 // import AsyncStorage from '@react-native-async-storage/async-storage'; // ❌ AsyncStorage 임포트 제거
 import { API_BASE_URL, googleMapsApiKey } from '../utils/config'; // ✅ 경로 확인
+import { useNavigation } from "@react-navigation/native"; 
 
 export default function DamageMapScreen() {
     const [damageLocations, setDamageLocations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-
+    const navigation = useNavigation(); 
+    
     useEffect(() => {
         fetchDamageLocations();
     }, []);

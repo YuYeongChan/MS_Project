@@ -18,7 +18,7 @@ import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
-import axios from 'axios';
+import axios from 'axios'; 
 
 const PublicPropertyReportScreen = () => {
   const [photo, setPhoto] = useState(null);

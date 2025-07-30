@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
+import { useNavigation } from '@react-navigation/native'; //  추가
 import { API_BASE_URL } from '../utils/config';
-
 
 const MyInfoScreen = () => {
   const [userInfo, setUserInfo] = useState(null);
+  const navigation = useNavigation(); //  네비게이션 사용
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -22,6 +23,21 @@ const MyInfoScreen = () => {
     };
     loadUserInfo();
   }, []);
+
+  //  로그아웃 함수
+  const handleLogout = async () => {
+    Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
+      { text: "취소", style: "cancel" },
+      { 
+        text: "로그아웃", 
+        style: "destructive",
+        onPress: async () => {
+          await AsyncStorage.removeItem('auth_token');
+          navigation.replace("AccountScreen"); // 로그인 화면으로 이동 (스택 네임에 맞춰 수정)
+        } 
+      }
+    ]);
+  };
 
   if (!userInfo) {
     return (
@@ -49,6 +65,11 @@ const MyInfoScreen = () => {
       <InfoRow label="주소" value={userInfo.address || "-"} />
       <InfoRow label="전화번호" value={userInfo.phone_number || "-"} />
       <InfoRow label="점수" value={`${userInfo.score}점`} />
+
+      {/*  로그아웃 버튼 */}
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+        <Text style={styles.logoutText}>로그아웃</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -59,6 +80,7 @@ const InfoRow = ({ label, value }) => (
     <Text style={styles.value}>{value}</Text>
   </View>
 );
+
 const shadow = {
   shadowColor: 'black',
   shadowOffset: { width: 4, height: 4 },
@@ -115,6 +137,19 @@ const styles = StyleSheet.create({
   value: {
     fontSize: 16,
     color: '#222',
+  },
+  logoutButton: {
+    marginTop: 30,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 20,
+    ...shadow,
+  },
+  logoutText: {
+    fontSize: 16,
+    color: '#7145C9',
+    fontWeight: 'bold',
   },
 });
 
