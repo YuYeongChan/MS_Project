@@ -168,6 +168,44 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     ...shadow,
-  }
-  
+  },
+
+  micButton: {
+    width: 200,
+    height: 200,
+    backgroundColor: "#7ED8C2",
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginVertical: 20,
+  },
+    micRecordingButton: {
+    width: 200,
+    height: 200,
+    backgroundColor: "#07ef60ff",
+    borderRadius: 100,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginVertical: 20,
+  },
+
+  voiceDescription: {
+    textAlign:'center',
+    fontSize: 22,
+    color: "black",
+    fontFamily: 'PretendardGOV-Bold',
+    marginBottom: 10,
+    },
+
+    voiceModal: {
+      backgroundColor: 'white',
+      borderRadius: 16,
+      padding: 24,
+      width: '80%',
+      alignSelf: 'center',        
+      alignItems: 'center',       
+      justifyContent: 'center',   
+    },
 });

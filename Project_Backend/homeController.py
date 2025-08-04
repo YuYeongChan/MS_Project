@@ -245,12 +245,3 @@ async def upload_audio(file: UploadFile = File(...)):
     })
 
 
-
-@router.get("/analyze_audio")
-async def analyze_audio(filename: str):
-    path = os.path.join("uploaded_audios", filename)
-    if not os.path.exists(path):
-        return {"error": "파일이 존재하지 않음"}
-
-    result = process_audio_and_get_structured_data(path)
-    return result
