@@ -92,7 +92,7 @@ const shadow = {
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    backgroundColor: '#7145C9',
+    backgroundColor: '#436D9D',
     alignItems: 'center',
     flexGrow: 1,
     paddingTop: 60,
@@ -101,14 +101,14 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#7145C9',
+    backgroundColor: '#436D9D',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    fontSize: 30,
     marginBottom: 25,
     textAlign: 'center',
     color: 'white',
+    fontFamily: 'PretendardGOV-Bold',
   },
   profileImage: {
     width: 140,
@@ -129,27 +129,28 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   label: {
-    fontWeight: 'bold',
-    color: '#7145C9',
-    fontSize: 14,
+    color: '#436D9D',
+    fontSize: 15,
     marginBottom: 5,
+    fontFamily: 'PretendardGOV-Bold',
   },
   value: {
     fontSize: 16,
     color: '#222',
+    fontFamily: 'PretendardGOV-Regular',
   },
   logoutButton: {
-    marginTop: 30,
-    backgroundColor: '#fff',
+    marginTop: 10,
+    backgroundColor: '#6f8cadff',
     paddingVertical: 12,
-    paddingHorizontal: 30,
+    paddingHorizontal: 70,
     borderRadius: 20,
     ...shadow,
   },
   logoutText: {
-    fontSize: 16,
-    color: '#7145C9',
-    fontWeight: 'bold',
+    fontSize: 17,
+    color: 'white',
+    fontFamily: 'PretendardGOV-Bold',
   },
 });
 

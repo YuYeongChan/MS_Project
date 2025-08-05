@@ -6,7 +6,6 @@ import {
     StyleSheet, 
     Alert, 
     TouchableOpacity, 
-    Platform, 
 } from "react-native";
 import { WebView } from "react-native-webview";
 // import AsyncStorage from '@react-native-async-storage/async-storage'; // ❌ AsyncStorage 임포트 제거

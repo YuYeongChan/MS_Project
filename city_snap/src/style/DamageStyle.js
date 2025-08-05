@@ -8,21 +8,18 @@ const shadow = {
     elevation: 7, // Android 전용
 }
 
-export const main_styles = StyleSheet.create({
+export const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: "#F9F9F9",
         paddingTop: 10,
         paddingHorizontal: 20,
     },
-    section: {
-        marginBottom: 20,
-    },
     sectionTitle: {
         fontSize: 18,
         color: "#436D9D",
         marginBottom: 15,
-        fontFamily: 'PretendardGOV-Bold',
+        fontFamily: 'PretendardGOV-ExtraBold',
     },
     button: {
         backgroundColor: "#436D9D",
@@ -42,6 +39,7 @@ export const main_styles = StyleSheet.create({
         borderRadius: 40,
         alignItems: "center",
         padding: 10,
+        marginBottom: 30,
         ...shadow,
     },
     mapImage: {

@@ -6,6 +6,7 @@ const ChooseDate = ({ onSelect }) => {
   return (
     <View style={styles.calendarWrapper}>
       <Calendar
+        style={styles.calendar}
         onDayPress={(day) => {
           onSelect(day.dateString);
         }}
