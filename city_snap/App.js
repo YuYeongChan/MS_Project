@@ -10,6 +10,7 @@ import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
 const Stack = createNativeStackNavigator();
 
 // npx expo start
+// npx expo start --tunnel 안드로이드에서 열기
 export default function App() {
   return (
     <NavigationContainer>

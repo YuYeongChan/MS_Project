@@ -12,12 +12,17 @@ import json # json 임포트 유지
 from datetime import datetime, timedelta
 import jwt
 
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
 SECRET_KEY = "YOUR_SECRET_KEY"
 ALGORITHM = "HS256"
 
 # `homeController.py`가 있는 `Project_Backend` 폴더의 부모 디렉토리 (MS_PROJECT_AINURI)를 sys.path에 추가합니다.
 # 이렇게 하면 'ai' 폴더를 직접 패키지처럼 임포트할 수 있습니다.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../ai"))) 
+# MS_PROJECT_AINURI 루트 경로 추가
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(PROJECT_ROOT)
 
 # 올바른 임포트 구문: 'ai' 패키지에서 함수를 가져옵니다.
 from ai.whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
@@ -207,7 +212,6 @@ async def upload_audio(file: UploadFile = File(...)):
     filename = file.filename
     save_path = os.path.join("uploaded_audios", filename)
     save_path = os.path.abspath(save_path)  # ✅ 절대경로로 변환!
-
     # 1. 파일 저장
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -216,7 +220,7 @@ async def upload_audio(file: UploadFile = File(...)):
     try:
         structured_result = process_audio_and_get_structured_data(save_path)
     except Exception as e:
-        print("❌ 구조화 중 오류 발생:", e)
+        print(" 구조화 중 오류 발생:", e)
         return JSONResponse(
             status_code=500,
             content={
@@ -229,7 +233,7 @@ async def upload_audio(file: UploadFile = File(...)):
         "message": "업로드 및 구조화 성공",
         "filename": filename,
         "path": save_path,
-        "result": structured_result  # 👈 React Native에서 이걸 받아서 detail 입력란에 사용
+        "result": structured_result  #  React Native에서 이걸 받아서 detail 입력란에 사용
     })
 
 
