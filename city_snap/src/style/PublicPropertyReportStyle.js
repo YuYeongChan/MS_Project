@@ -5,12 +5,12 @@ const shadow = {
   shadowOffset: { width: 10, height: 10 },
   shadowOpacity: 0.8,
   shadowRadius: 20,
-  elevation: 10,
+  elevation: 7,
 };
 
 export const styles = StyleSheet.create({
   container: {
-    backgroundColor: "#7145C9",
+    backgroundColor: "#F9F9F9",
     paddingTop: 70,
     paddingLeft: 25,
     paddingRight: 25,
@@ -18,28 +18,30 @@ export const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    color: "white",
-    fontWeight: "bold",
+    color: "#436D9D",
+    fontFamily: 'PretendardGOV-ExtraBold',
     marginBottom: 25,
   },
   subtitle: {
     fontSize: 17,
-    color: "white",
-    fontWeight: "bold",
+    color: "#436D9D",
+    fontFamily: 'PretendardGOV-Bold',
     marginBottom: 15,
   },
   photoBox: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ECECEC",
     height: 180,
     borderRadius: 35,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
+    borderColor: "#748ca7ff",
+    borderWidth: 1,
     ...shadow,
   },
   plusIcon: {
     fontSize: 40,
-    fontWeight: "bold",
+    fontFamily: 'PretendardGOV-Bold',
     color: "black",
   },
   photo: {
@@ -57,14 +59,14 @@ export const styles = StyleSheet.create({
     color: "#000",
   },
   submitButton: {
-    backgroundColor: "#945EE2",
+    backgroundColor: "#436D9D",
     borderRadius: 20,
     paddingVertical: 14,
     alignItems: "center",
     ...shadow,
   },
   chooseButton: {
-    backgroundColor: "#945EE2",
+    backgroundColor: "#436D9D",
     borderRadius: 20,
     paddingVertical: 16,
     alignItems: "flex-start",
@@ -75,10 +77,10 @@ export const styles = StyleSheet.create({
   submitText: {
     fontSize: 17,
     color: "white",
-    fontWeight: "bold",
+    fontFamily: 'PretendardGOV-Bold',
   },
   viewStyle: {
-    backgroundColor: "#945EE2",
+    backgroundColor: "#436D9D",
     borderRadius: 20,
     height: 200,
     marginBottom: 20,
@@ -89,7 +91,7 @@ export const styles = StyleSheet.create({
   viewTitle: {
     fontSize: 17,
     color: "white",
-    fontWeight: "bold",
+    fontFamily: 'PretendardGOV-Bold',
     marginBottom: 10,
   },
   textArea: {
@@ -116,7 +118,7 @@ export const styles = StyleSheet.create({
     height: '70%',
   },
   modalButton: {
-    backgroundColor: "#945EE2",
+    backgroundColor: "#436D9D",
     borderRadius: 20,
     marginTop: 10,
     height: 35,
@@ -125,7 +127,7 @@ export const styles = StyleSheet.create({
     ...shadow,
   },
   recordButton: {
-      backgroundColor: "#945EE2",
+      backgroundColor: "#CBCDD3",
       borderRadius: 20,
       width: 170,
       height: 30,
@@ -133,10 +135,10 @@ export const styles = StyleSheet.create({
       justifyContent: 'center',
       display: "flex",
       flexDirection: "row",
+      borderColor: "white",
+      borderWidth: 1,
       marginBottom: 20,
-      borderColor: "black",
-      borderWidth: 2,
-      ...shadow,
+      // ...shadow,
   },
   recordIcon: {
     width: 28,
@@ -150,19 +152,22 @@ export const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   locationAddressText: {
-  backgroundColor: "#945EE2",     // 보라색 배경
-  borderRadius: 20,
-  borderWidth: 2,
-  paddingVertical: 6,
-  paddingHorizontal: 12,
-  marginTop: 10,
-  marginBottom: 10,
-  alignSelf: 'center',
-  textAlign: 'center',
-  color: "white",
-  fontSize: 14,
-  fontWeight: 'bold',
-  ...shadow,
-}
+    height: 80,
+    width: '100%',
+    backgroundColor: "#ECECEC",
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#436D9D",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    alignSelf: 'center',
+    textAlign: 'center',
+    color: "black",
+    fontSize: 16,
+    fontWeight: 'bold',
+    ...shadow,
+  }
   
 });

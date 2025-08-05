@@ -279,7 +279,7 @@ const SignUpScreen = ({ navigation }) => {
 
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="비밀번호 (영문, 숫자, 특수문자 포함 8자 이상)"
+                    placeholder="비밀번호 (영문/숫자/특수문자 포함 8자 이상)"
                     placeholderTextColor="#999"
                     value={password}
                     onChangeText={setPassword}
@@ -338,7 +338,7 @@ const SignUpScreen = ({ navigation }) => {
                 />
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="전화번호 (선택 사항, 예: 010-1234-5678)"
+                    placeholder="전화번호 (예: 010-1234-5678)"
                     placeholderTextColor="#999"
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
@@ -347,14 +347,14 @@ const SignUpScreen = ({ navigation }) => {
                 />
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="주소 (선택 사항)"
+                    placeholder="주소"
                     placeholderTextColor="#999"
                     value={address}
                     onChangeText={setAddress}
                 />
                 <TextInput
                     style={signUpStyles.input}
-                    placeholder="주민등록번호 (필수, 예: 123456-1234567)"
+                    placeholder="주민등록번호 (예: 123456-1234567)"
                     placeholderTextColor="#999"
                     value={residentIdNumber}
                     onChangeText={setResidentIdNumber}
@@ -387,7 +387,7 @@ const signUpStyles = StyleSheet.create({
         flexGrow: 1,
         justifyContent: 'center',
         paddingVertical: 30,
-        backgroundColor: '#7145C9',
+        backgroundColor: '#436D9D',
     },
     container: {
         justifyContent: 'center',
@@ -396,7 +396,7 @@ const signUpStyles = StyleSheet.create({
     },
     title: {
         fontSize: 30,
-        fontWeight: 'bold',
+        fontFamily: 'PretendardGOV-Bold',
         color: 'white',
         marginBottom: 30,
     },
@@ -407,10 +407,11 @@ const signUpStyles = StyleSheet.create({
         paddingHorizontal: 18,
         borderRadius: 10,
         marginBottom: 12,
-        fontSize: 16,
+        fontSize: 15,
         color: '#333',
         borderWidth: 1,
         borderColor: '#ddd',
+        fontFamily: 'PretendardGOV-Bold',
     },
     inputWithButtonContainer: {
         flexDirection: 'row',
@@ -424,7 +425,7 @@ const signUpStyles = StyleSheet.create({
         marginBottom: 0,
     },
     checkButton: {
-        backgroundColor: '#6A40C2',
+        backgroundColor: '#1c5aa1ff',
         paddingVertical: 14,
         paddingHorizontal: 15,
         borderRadius: 10,
@@ -434,14 +435,14 @@ const signUpStyles = StyleSheet.create({
     checkButtonText: {
         color: 'white',
         fontSize: 14,
-        fontWeight: 'bold',
+        fontFamily: 'PretendardGOV-Bold',
     },
     availabilityText: {
         alignSelf: 'flex-start',
         marginLeft: 15,
         marginBottom: 10,
         fontSize: 13,
-        fontWeight: 'bold',
+        fontFamily: 'PretendardGOV-Bold',
     },
     checkingText: {
         alignSelf: 'flex-start',
@@ -449,6 +450,7 @@ const signUpStyles = StyleSheet.create({
         marginBottom: 10,
         fontSize: 13,
         color: 'gray',
+        fontFamily: 'PretendardGOV-Bold',
     },
     // --- 프로필 사진 관련 스타일 ---
     photoSubtitle: {
@@ -457,8 +459,8 @@ const signUpStyles = StyleSheet.create({
         marginBottom: 10,
         marginTop: 10,
         fontSize: 17,
-        fontWeight: 'bold',
         color: 'white',
+        fontFamily: 'PretendardGOV-Bold',
     },
     photoBox: {
         width: 100,
@@ -481,11 +483,12 @@ const signUpStyles = StyleSheet.create({
         fontSize: 40,
         color: '#888',
         fontWeight: 'normal',
+        fontFamily: 'PretendardGOV-Regular',
     },
     // --- 기존 버튼 및 텍스트 스타일은 유지 ---
     signupButton: {
         width: '100%',
-        backgroundColor: '#945EE2',
+        backgroundColor: '#1c5aa1ff',
         paddingVertical: 16,
         borderRadius: 10,
         alignItems: 'center',
@@ -495,7 +498,7 @@ const signUpStyles = StyleSheet.create({
     buttonText: {
         color: 'white',
         fontSize: 18,
-        fontWeight: 'bold',
+        fontFamily: 'PretendardGOV-Bold',
     },
     backToLoginButton: {
         marginTop: 15,
@@ -506,6 +509,7 @@ const signUpStyles = StyleSheet.create({
         color: '#ADD8E6', 
         fontSize: 15,
         textDecorationLine: 'underline',
+        fontFamily: 'PretendardGOV-Bold',
     },
 });
 

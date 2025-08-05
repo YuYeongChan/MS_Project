@@ -58,7 +58,7 @@ const AccountScreen = ({ navigation }) => {
                     // 여기서 화면 바꿀수 있음
                     navigation.replace('AdminMainScreen'); // 관리자 메인화면
                 } else {
-                    navigation.replace('MainScreen'); // 일반 사용자 메인화면
+                    navigation.replace('UserTabNavigator'); // 일반 사용자 메인화면
                 }
             } else {
                 console.error("로그인 서버 응답 오류:", responseData);
@@ -119,12 +119,12 @@ const loginStyles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#7145C9',
+        backgroundColor: '#436D9D',
         padding: 20,
     },
     title: {
-        fontSize: 32,
-        fontWeight: 'bold',
+        fontSize: 35,
+        fontFamily: 'PretendardGOV-Bold',
         color: 'white',
         marginBottom: 40,
     },
@@ -136,10 +136,11 @@ const loginStyles = StyleSheet.create({
         marginBottom: 15,
         fontSize: 16,
         color: '#333',
+        fontFamily: 'PretendardGOV-Bold',
     },
     loginButton: {
         width: '90%',
-        backgroundColor: '#945EE2',
+        backgroundColor: '#6f8cadff',
         padding: 15,
         borderRadius: 10,
         alignItems: 'center',
@@ -147,8 +148,8 @@ const loginStyles = StyleSheet.create({
     },
     buttonText: {
         color: 'white',
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 19,
+        fontFamily: 'PretendardGOV-Bold',
     },
     signupButton: {
         marginTop: 20,
@@ -158,6 +159,7 @@ const loginStyles = StyleSheet.create({
         color: '#ADD8E6',
         fontSize: 16,
         textDecorationLine: 'underline',
+        fontFamily: 'PretendardGOV-Bold',
     },
 });
 
