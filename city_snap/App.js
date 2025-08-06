@@ -11,14 +11,13 @@ import DamageMapScreen from './src/contents/DamageMapScreen';
 import MyDamageListScreen from './src/contents/MyDamageListScreen';
 import RankingScreen from './src/contents/RankingScreen';
 import SettingsScreen from './src/contents/SettingsScreen';
-import NoticeBoardScreen from './src/contents/sub_contents/NoticeBoardScreen';
+import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DamageScreen from './src/contents/DamageScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -53,8 +52,8 @@ function UserTabNavigator() {
             if (route.name === 'MainScreen') {
               iconName = focused ? 'home' : 'home-outline';
             }
-            else if (route.name === 'DamageScreen') {
-              iconName = focused ? 'construct' : 'construct-outline';
+            else if (route.name === 'NoticeBoardScreen') {
+              iconName = focused ? 'megaphone' : 'megaphone-outline';
             }
             else if (route.name === 'RankingScreen') {
               iconName = focused ? 'trophy' : 'trophy-outline';
@@ -75,7 +74,7 @@ function UserTabNavigator() {
         })}
       >
         <Tab.Screen name="MainScreen" component={MainScreen} options={{ title: '홈' }} />
-        <Tab.Screen name="DamageScreen" component={DamageScreen} options={{ title: '파손 현황' }} />
+        <Tab.Screen name="NoticeBoardScreen" component={NoticeBoardScreen} options={{ title: '공지 사항' }} />
         <Tab.Screen name="RankingScreen" component={RankingScreen} options={{ title: '순위표' }} />
         <Tab.Screen name="MyInfoScreen" component={MyInfoScreen} options={{ title: '내 정보' }} />
         <Tab.Screen name="SettingsScreen" component={SettingsScreen} options={{ title: '설정' }} />
