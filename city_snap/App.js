@@ -19,6 +19,7 @@ import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import DamageScreen from './src/contents/DamageScreen';
+import AdminLayout from './src/contents/Admin/AdminLayout';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -110,6 +111,7 @@ export default function App() {
           <Stack.Screen name="UserTabNavigator" component={UserTabNavigator} />
           <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} />
           <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
+          <Stack.Screen name="AdminLayout" component={AdminLayout} />
           <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
         </Stack.Navigator>
       </NavigationContainer>
