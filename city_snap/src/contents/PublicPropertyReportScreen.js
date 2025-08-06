@@ -106,18 +106,13 @@ const PublicPropertyReportScreen = () => {
       name: filename,
       type: fileType,
     });
-    formData.append(
-      "location_description",
-      `${location.address} (위도: ${location.lat.toFixed(
-        6
-      )}, 경도: ${location.lng.toFixed(6)})`
-    );
-    formData.append("latitude", location.lat);
-    formData.append("longitude", location.lng);
-    formData.append("address", location.address);
-    formData.append("report_date", date);
-    formData.append("details", detail);
-    formData.append("user_id", userId);
+    formData.append('location_description', location.address);
+    formData.append('latitude', location.lat);
+    formData.append('longitude', location.lng);
+    formData.append('address', location.address);
+    formData.append('report_date', date);
+    formData.append('details', detail);
+    formData.append('user_id', userId);
 
     try {
       const response = await fetch(`${API_BASE_URL}/registration.write`, {

@@ -46,7 +46,7 @@ export const main_styles = StyleSheet.create({
     },
     mapImage: {
         width: '90%',
-        height: 300,
+        height: 280,
         marginBottom: 10,
     },
     mapLabel: {

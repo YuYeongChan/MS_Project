@@ -261,3 +261,92 @@ class AccountDAO:
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
     
+    # 개인정보 수정 
+    def updateUserInfo(self, user_id, nickname=None, phone_number=None, address=None, profile_pic_url=None):
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            update_fields = []
+            params = {"user_id": user_id}
+
+            if nickname:
+                update_fields.append("nickname = :nickname")
+                params["nickname"] = nickname
+            if phone_number:
+                update_fields.append("phone_number = :phone_number")
+                params["phone_number"] = phone_number
+            if address:
+                update_fields.append("address = :address")
+                params["address"] = address
+            if profile_pic_url is not None:
+                update_fields.append("profile_pic_url = :profile_pic_url")
+                params["profile_pic_url"] = profile_pic_url
+
+            if not update_fields:
+                return False
+
+            sql = f"UPDATE Users SET {', '.join(update_fields)} WHERE user_id = :user_id"
+            cur.execute(sql, params)
+            con.commit()
+            return True
+        except Exception as e:
+            if con: con.rollback()
+            print("회원 정보 수정 실패:", str(e))
+            return False
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # 유저 정보 가져오기 
+    def getUserInfo(self, user_id: str) -> dict:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                SELECT 
+                    user_id, nickname, name, address, resident_id_number,
+                    score, profile_pic_url, phone_number, is_admin
+                FROM Users
+                WHERE user_id = :user_id
+            """
+            cur.execute(sql, {'user_id': user_id})
+            row = cur.fetchone()
+
+            if not row:
+                return {}
+
+            return {
+                "user_id": row[0],
+                "nickname": row[1],
+                "name": row[2],
+                "address": row[3],
+                "resident_id_number": row[4],
+                "score": row[5],
+                "profile_pic_url": row[6],
+                "phone_number": row[7],
+                "is_admin": row[8],
+            }
+        except Exception as e:
+            print(f"[getUserInfo] 사용자 정보 조회 오류: {e}")
+            return {}
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+        
+    # 회원 탈퇴 (DB에서 사용자 삭제)
+    def deleteUser(self, user_id: str) -> bool:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = "DELETE FROM Users WHERE user_id = :user_id"
+            cur.execute(sql, {'user_id': user_id})
+            con.commit()
+            print(f"[회원 탈퇴] 사용자 {user_id} 삭제 완료")
+            return True
+        except Exception as e:
+            print(f"[회원 탈퇴 오류] {e}")
+            if con:
+                con.rollback()
+            return False
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
