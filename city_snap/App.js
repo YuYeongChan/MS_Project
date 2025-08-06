@@ -15,13 +15,12 @@ import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-const DamageStatusStack = createNativeStackNavigator();
 
 // for User
 function UserTabNavigator() {

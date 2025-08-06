@@ -113,11 +113,11 @@ def checkUserId(user_id: str):
         return {"result": "사용 가능한 사용자 ID입니다."}
     
 @app.get("/account.ranking")
-def getRanking():
+def getRanking(user_id: str):
     # 사용자 랭킹을 조회
     # 랭킹은 점수(score) 기준으로 내림차순 정렬
     try:
-        ranking = aDAO.getRanking()
+        ranking = aDAO.getRanking(user_id)
         if not ranking:
             return JSONResponse(status_code=404, content={"error": "랭킹 정보가 없습니다."})
         return ranking.body
