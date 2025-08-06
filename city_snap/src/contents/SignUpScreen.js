@@ -159,21 +159,35 @@ const SignUpScreen = ({ navigation }) => {
 
     try {
       const response = await fetch(`${API_BASE_URL}/account.sign.up`, {
-        method: "POST",
-        body: formData,
-      });
-      const responseData = await response.json();
-      if (response.ok) {
-        Alert.alert("회원가입 성공", responseData.result || "회원가입 완료!");
-        navigation.goBack();
-      } else {
-        Alert.alert("회원가입 실패", responseData.error || "다시 시도해주세요.");
-      }
-    } catch (error) {
-      Alert.alert("네트워크 오류", "서버와 통신할 수 없습니다.");
-    } finally {
-      setIsLoading(false);
-    }
+    method: "POST",
+    body: formData,
+  });
+
+  const rawText = await response.text(); //  JSON 파싱 전에 텍스트로 응답 확인
+  console.log(" Raw response:", rawText);
+
+  let responseData;
+  try {
+    responseData = JSON.parse(rawText); //  JSON 파싱 시도
+  } catch (jsonError) {
+    console.warn(" JSON 파싱 실패:", jsonError.message);
+    Alert.alert("서버 응답 오류", "회원가입은 되었지만 서버 응답 처리에 실패했습니다.");
+    setIsLoading(false);
+    return;
+  }
+
+  if (response.ok) {
+    Alert.alert("회원가입 성공", responseData.result || "회원가입 완료!");
+    navigation.goBack();
+  } else {
+    Alert.alert("회원가입 실패", responseData.error || "다시 시도해주세요.");
+  }
+} catch (error) {
+  console.error(" 네트워크 에러:", error.message);
+  Alert.alert("네트워크 오류", "서버와 통신할 수 없습니다.");
+} finally {
+  setIsLoading(false);
+}
   };
 
   return (
@@ -332,26 +346,33 @@ const signUpStyles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingVertical: 30,
-    backgroundColor: "#7145C9",
+    backgroundColor: "#436D9D", // 로그인과 동일하게
   },
   container: {
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 25,
   },
-  title: { fontSize: 30, fontWeight: "bold", color: "white", marginBottom: 30 },
+  title: {
+    fontSize: 35,
+    color: "white",
+    fontFamily: "PretendardGOV-Bold",
+    marginBottom: 30,
+  },
   input: {
     width: "100%",
     backgroundColor: "#fff",
-    paddingVertical: 14,
-    paddingHorizontal: 18,
+    padding: 15,
     borderRadius: 10,
-    marginBottom: 12,
+    marginBottom: 15,
+    fontSize: 16,
+    color: "#333",
+    fontFamily: "PretendardGOV-Bold",
   },
   inputWithButtonContainer: {
     flexDirection: "row",
     width: "100%",
-    marginBottom: 12,
+    marginBottom: 15,
     alignItems: "center",
   },
   inputWithButton: {
@@ -360,20 +381,23 @@ const signUpStyles = StyleSheet.create({
     marginBottom: 0,
   },
   checkButton: {
-    backgroundColor: "#6A40C2",
-    paddingVertical: 14,
-    paddingHorizontal: 15,
+    backgroundColor: "#6f8cadff", // 로그인 버튼 색
+    padding: 15,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkButtonText: { color: "white", fontWeight: "bold" },
+  checkButtonText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "PretendardGOV-Bold",
+  },
   photoSubtitle: {
     alignSelf: "flex-start",
     marginBottom: 10,
     marginTop: 10,
     fontSize: 17,
-    fontWeight: "bold",
+    fontFamily: "PretendardGOV-Bold",
     color: "white",
   },
   photoBox: {
@@ -385,23 +409,38 @@ const signUpStyles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
-  profilePhoto: { width: "100%", height: "100%", resizeMode: "cover" },
-  plusIcon: { fontSize: 40, color: "#888" },
+  profilePhoto: {
+    width: "100%",
+    height: "100%",
+    resizeMode: "cover",
+  },
+  plusIcon: {
+    fontSize: 40,
+    color: "#888",
+  },
   signupButton: {
     width: "100%",
-    backgroundColor: "#945EE2",
-    paddingVertical: 16,
+    backgroundColor: "#6f8cadff", // 로그인 버튼 색
+    padding: 15,
     borderRadius: 10,
     alignItems: "center",
     marginTop: 20,
   },
-  buttonText: { color: "white", fontSize: 18, fontWeight: "bold" },
+  buttonText: {
+    color: "white",
+    fontSize: 19,
+    fontFamily: "PretendardGOV-Bold",
+  },
   closeButton: {
-    backgroundColor: "#7145C9",
+    backgroundColor: "#436D9D",
     padding: 15,
     alignItems: "center",
   },
-  closeText: { color: "white", fontWeight: "bold" },
+  closeText: {
+    color: "white",
+    fontSize: 16,
+    fontFamily: "PretendardGOV-Bold",
+  },
 });
 
 export default SignUpScreen;

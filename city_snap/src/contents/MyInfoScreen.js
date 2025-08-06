@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
-import { useNavigation } from '@react-navigation/native'; //  추가
+import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { API_BASE_URL } from '../utils/config';
 
 const MyInfoScreen = () => {
   const [userInfo, setUserInfo] = useState(null);
-  const navigation = useNavigation(); //  네비게이션 사용
+  const navigation = useNavigation();
+  const isFocused = useIsFocused(); //  포커스 여부 감지
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -21,10 +22,12 @@ const MyInfoScreen = () => {
         }
       }
     };
-    loadUserInfo();
-  }, []);
 
-  //  로그아웃 함수
+    if (isFocused) {
+      loadUserInfo(); //  돌아올 때마다 최신 정보 불러오기
+    }
+  }, [isFocused]);
+
   const handleLogout = async () => {
     Alert.alert("로그아웃", "정말 로그아웃하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -33,9 +36,42 @@ const MyInfoScreen = () => {
         style: "destructive",
         onPress: async () => {
           await AsyncStorage.removeItem('auth_token');
-          navigation.replace("AccountScreen"); // 로그인 화면으로 이동 (스택 네임에 맞춰 수정)
+          navigation.replace("AccountScreen");
         } 
       }
+    ]);
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert("회원 탈퇴", "정말로 탈퇴하시겠습니까? 이 작업은 되돌릴 수 없습니다.", [
+      { text: "취소", style: "cancel" },
+      {
+        text: "탈퇴",
+        style: "destructive",
+        onPress: async () => {
+          const token = await AsyncStorage.getItem('auth_token');
+          try {
+            const response = await fetch(`${API_BASE_URL}/delete_account`, {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+              Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.");
+              await AsyncStorage.removeItem('auth_token');
+              navigation.replace("AccountScreen");
+            } else {
+              Alert.alert("탈퇴 실패", data.message || "오류가 발생했습니다.");
+            }
+          } catch (error) {
+            console.error("탈퇴 요청 중 오류:", error);
+            Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
+          }
+        },
+      },
     ]);
   };
 
@@ -66,9 +102,20 @@ const MyInfoScreen = () => {
       <InfoRow label="전화번호" value={userInfo.phone_number || "-"} />
       <InfoRow label="점수" value={`${userInfo.score}점`} />
 
-      {/*  로그아웃 버튼 */}
       <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
         <Text style={styles.logoutText}>로그아웃</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: '#FFC107' }]}
+        onPress={() => navigation.navigate("EditUserInfoScreen", { userInfo })}>
+        <Text style={styles.buttonText}>정보 수정</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: '#dc3545' }]}
+        onPress={handleDeleteAccount}>
+        <Text style={styles.buttonText}>회원 탈퇴</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -151,6 +198,19 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: 'white',
     fontFamily: 'PretendardGOV-Bold',
+  },
+  button: {
+    marginTop: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 70,
+    borderRadius: 20,
+    ...shadow,
+  },
+  buttonText: {
+    fontSize: 17,
+    color: 'white',
+    fontFamily: 'PretendardGOV-Bold',
+    textAlign: 'center',
   },
 });
 
