@@ -111,6 +111,18 @@ def checkUserId(user_id: str):
         raise HTTPException(status_code=409, detail="이미 사용 중인 사용자 ID입니다.")
     else:
         return {"result": "사용 가능한 사용자 ID입니다."}
+    
+@app.get("/account.ranking")
+def getRanking():
+    # 사용자 랭킹을 조회
+    # 랭킹은 점수(score) 기준으로 내림차순 정렬
+    try:
+        ranking = aDAO.getRanking()
+        if not ranking:
+            return JSONResponse(status_code=404, content={"error": "랭킹 정보가 없습니다."})
+        return ranking.body
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
 
 
 # 신고 등록 API 엔드포인트
@@ -233,12 +245,3 @@ async def upload_audio(file: UploadFile = File(...)):
     })
 
 
-
-@router.get("/analyze_audio")
-async def analyze_audio(filename: str):
-    path = os.path.join("uploaded_audios", filename)
-    if not os.path.exists(path):
-        return {"error": "파일이 존재하지 않음"}
-
-    result = process_audio_and_get_structured_data(path)
-    return result

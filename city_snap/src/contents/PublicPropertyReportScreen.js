@@ -18,7 +18,11 @@ import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
 import ChooseDate from "./sub_contents/ChooseDate";
 import { styles } from "../style/PublicPropertyReportStyle";
 import { API_BASE_URL } from '../utils/config';
-import axios from 'axios'; 
+import axios from 'axios';
+import { googleMapsApiKey } from '../utils/config';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+
 
 const PublicPropertyReportScreen = () => {
   const [photo, setPhoto] = useState(null);
@@ -32,7 +36,9 @@ const PublicPropertyReportScreen = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
   const [audioUri, setAudioUri] = useState(null);
+  const [voiceState, setVoiceState] = useState("idle");
 
+ 
   useEffect(() => {
     if (!date) {
       const today = new Date();
@@ -61,29 +67,6 @@ const PublicPropertyReportScreen = () => {
 
     // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
 
-        // 음성 파일 업로드 함수
-
-    const uploadAudioToServer = async (uri) => {
-        const filename = uri.split("/").pop();
-
-        const formData = new FormData();
-        formData.append("file", {
-            uri: Platform.OS === 'android' ? uri : uri.replace('file://', ''),
-            name: filename,
-            type: "audio/x-m4a",
-        });
-
-        try {
-            const res = await axios.post("http://192.168.254.107:1234/upload_audio", formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-            },
-            });
-            console.log("업로드 성공:", res.data);
-        } catch (err) {
-            console.error("업로드 실패:", err.message, err.response?.data || err);
-        }
-    };
 
   const handleLocation = (coords) => {
     setTempSelectedLocation(coords);
@@ -160,10 +143,21 @@ const PublicPropertyReportScreen = () => {
 
   const startRecording = async () => {
     try {
+      setVoiceState("recording");
       const { status } = await Audio.requestPermissionsAsync();
-      if (status !== 'granted') return Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+      if (status !== 'granted'){ 
+           Alert.alert('권한 필요', '마이크 권한을 허용해주세요.');
+          setVoiceState("idle");
+          return;
+          };
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true, 
+        playsInSilentModeIOS: true 
+      });
+      const { recording } = await Audio.Recording.createAsync(
+        Audio.RecordingOptionsPresets.HIGH_QUALITY
+      );
+
       setRecording(recording);
       setIsRecording(true);
     } catch (err) {
@@ -172,53 +166,133 @@ const PublicPropertyReportScreen = () => {
     }
   };
 
+  const stopRecording = async () => {
+    try {
+      console.log("녹음 중지 요청");
+      setVoiceState("processing");
+
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+      setAudioUri(uri);
+      console.log(" 서버에 업로드 요청 시작");
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri,
+        name: "recording.m4a",
+        type: "audio/m4a",
+      });
+
+      const response = await axios.post(`${API_BASE_URL}/upload_audio`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const result = response.data.result;
+      console.log(" AI 구조화 결과:", result);
+
+      // 상세 내용 업데이트
+      const combinedDetail = `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
+      setDetail(combinedDetail);
+
+      // 주소가 존재하면 → 위도경도 변환 시도
+      if (typeof result["장소"] === "string") {
+        const geoRes = await fetch(
+          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(result["장소"])}&key=${googleMapsApiKey}`
+        );
+        const geoData = await geoRes.json();
+
+        if (geoData.status === "OK") {
+          const loc = geoData.results[0].geometry.location;
+          setLocation({
+            address: result["장소"],
+            lat: loc.lat,
+            lng: loc.lng,
+          });
+          console.log(" 위치 변환 성공:", loc);
+        } else {
+          // 변환 실패 시 lat/lng 0으로 설정
+          setLocation({
+            address: result["장소"],
+            lat: 0,
+            lng: 0,
+          });
+          console.warn("위치 변환 실패: status =", geoData.status);
+        }
+      }
+    } catch (error) {
+      console.warn("오류 발생:", error);
+      Alert.alert("오류", "음성 분석 중 오류가 발생했습니다.");
+    } finally {
+      setVoiceState("idle");
+      setVisible(false);
+    }
+  };
+
+
     // 음성 녹음 종료
-    const stopRecording = async () => {
-        console.log("녹음 중지 요청");
+  //   const stopRecording = async () => {
+  //     console.log("녹음 중지 요청");
+  //     setVoiceState("processing");
+  //     await recording.stopAndUnloadAsync();
+  //     const uri = recording.getURI();
 
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
-        setAudioUri(uri);
 
-        console.log(" 녹음 완료, URI:", uri);
-        console.log("서버에 업로드 요청 시작");
+  //     console.log("녹음 완료, URI:", uri);
+  //     console.log("서버에 업로드 요청 시작");
 
-        const formData = new FormData();
-        formData.append("file", {
-            uri: uri,
-            name: "recording.m4a",
-            type: "audio/m4a",
-        });
+  //     const formData = new FormData();
+  //     formData.append("file", {
+  //         uri: uri,
+  //         name: "recording.m4a",
+  //         type: "audio/m4a",
+  //     });
 
-        axios.post("http://195.168.9.64:1234/upload_audio", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-        })
-        .then((res) => {
-            const result = res.data.result;
+  //     axios.post(`${API_BASE_URL}/upload_audio`, formData, {
+  //         headers: { "Content-Type": "multipart/form-data" },
+  //     })
+  //     .then((res) => {
+  //         const result = res.data.result;
+  //         console.log(result);
 
-            if (typeof result["장소"] === "string") {
-                fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(result["장소"])}&key=${googleMapsApiKey}`)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data.status === "OK") {
-                            const loc = data.results[0].geometry.location;
-                            setLocation({
-                                address: result["장소"],
-                                lat: loc.lat,
-                                lng: loc.lng
-                            });
-                        }
-                    });
-            } else {
-                setLocation(result["장소"]);
-            }
+  //         if (typeof result["장소"] === "string") {
+  //             fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(result["장소"])}&key=${googleMapsApiKey}`)
+  //                 .then(r => r.json())
+  //                 .then(data => {
+  //                     if (data.status === "OK") {
+  //                         const loc = data.results[0].geometry.location;
+  //                         setLocation({
+  //                             address: result["장소"],
+  //                             lat: loc.lat,
+  //                             lng: loc.lng
+  //                         });
+  //                     } else {
+  //                         setLocation({
+  //                             address: result["장소"],
+  //                             lat: 0,
+  //                             lng: 0
+  //                         });
+  //                     }
+  //                 })
+  //                 .catch(e => {
+  //                     console.warn("주소 변환 실패:", e);
+  //                     setLocation({
+  //                         address: result["장소"],
+  //                         lat: 0,
+  //                         lng: 0
+  //                     });
+  //                 });
+  //         }
 
-            const combinedDetail =
-                `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
-            setDetail(combinedDetail);
-        });
-    };
-
+  //         // ✅ 여기가 then 블록 안
+  //         const combinedDetail =
+  //             `${result["공공기물 종류"] || ""} - ${result["발견된 문제 또는 점검 필요 사유"] || ""}`;
+  //         setDetail(combinedDetail);
+  //     })
+  //     .catch((e) => {
+  //         console.warn("upload_audio 요청 실패:", e);
+  //         Alert.alert("오류", "서버 통신 실패");
+  //     });
+  // };
   return (
     <View style={styles.container}>
         <Text style={styles.title}>공공기물 파손 등록</Text>
@@ -280,6 +354,46 @@ const PublicPropertyReportScreen = () => {
                     <ChooseDate onSelect={(selectedDate) => { setDate(selectedDate); setVisible(false); }} />
                     )}
                     {modalType === "voice" && (
+                      <View style={styles.voiceModal}>
+                        {voiceState !== "processing" && (
+                          <Text style={styles.voiceDescription}>AI 음성 등록 서비스</Text>
+                        )}
+
+                        {/* 대기 상태 */}
+                        {voiceState === "idle" && (
+                          <>
+                            <TouchableOpacity onPress={startRecording} style={styles.micButton}>
+                              <Icon name="microphone-outline" size={100} color="white" />
+                            </TouchableOpacity>
+                            <Text style={styles.voiceDescription}>버튼을 눌러 녹음을 시작하세요.</Text>
+                          </>
+                        )}
+
+                        {/* 녹음 중 */}
+                        {voiceState === "recording" && (
+                          <>
+                            <TouchableOpacity onPress={stopRecording} style={styles.micRecordingButton}>
+                              <Icon name="microphone-outline" size={100} color="white" />
+                            </TouchableOpacity>
+                            <Text style={styles.voiceDescription}>녹음 중 입니다.</Text>
+                          </>
+                        )}
+
+                        {/* AI 처리 중 */}
+                        {voiceState === "processing" && (
+                          <>
+                            <Text style={styles.voiceDescription}>AI 구조화 중 입니다.</Text>
+                           <ActivityIndicator 
+                              size="large" 
+                              color="#7ED8C2" 
+                              style={{ transform: [{ scale: 4 }], marginTop: 50 }} 
+                            />
+                          </>
+                        )}
+                      </View>
+                    )}
+
+                    {/* {modalType === "voice" && (
                     <View style={styles.voiceModal}>
                         <Text style={styles.voiceTitle}>AI 음성 등록 서비스</Text>
                         <Text style={styles.voiceDescription}>음성으로 공공기물 파손 내용을 등록하세요.</Text>
@@ -295,7 +409,7 @@ const PublicPropertyReportScreen = () => {
                         <Text style={styles.submitText}>닫기</Text>
                         </TouchableOpacity>
                     </View>
-                    )}
+                    )} */}
                 </View>
                 </View>
             </Modal>
