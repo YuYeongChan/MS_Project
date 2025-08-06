@@ -1,7 +1,7 @@
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { main_styles } from "../style/MainStyle";
-import NoticeBoardScreen from "./sub_contents/NoticeBoardScreen";
+import NoticeBoardScreen from "./NoticeBoardScreen";
 
 function MainScreen() {
     const navigation = useNavigation();
@@ -22,11 +22,17 @@ function MainScreen() {
                 >
                     <Text style={main_styles.buttonText}>공공기물 파손 등록</Text>
                 </TouchableOpacity>
-            </View>
 
-            <View style={main_styles.section}>
-                <Text style={main_styles.sectionTitle}>공지사항</Text>
-                <NoticeBoardScreen />
+                <TouchableOpacity
+                    style={main_styles.mapBox}
+                    onPress={() => navigation.navigate("DamageMapScreen")}
+                >
+                    <Text style={main_styles.mapLabel}>공공기물 파손 현황 지도</Text>
+                    <Image
+                        source={require('./img/map_img.png')}
+                        style={main_styles.mapImage}
+                    />
+                </TouchableOpacity>
             </View>
         </ScrollView>
     );

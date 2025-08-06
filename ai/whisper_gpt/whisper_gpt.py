@@ -32,7 +32,12 @@ def process_audio_and_get_structured_data(audio_path: str) -> dict:
         "content": (
             "너는 신고 내용을 다음 세 항목으로 간단히 정리하는 도우미야.\n"
             "1. 장소\n2. 공공기물 종류\n3. 발견된 문제 또는 점검 필요 사유\n"
-            "각 항목은 한 줄로 간결하게 작성하고, 불필요한 문장은 추가하지 마."
+        "반드시 아래 지침을 지켜:\n"
+        "1. 입력된 텍스트에 있는 정보만 사용해. 없는 내용을 새로 만들지 마.\n"
+        "2. 장소 정보가 '성도구', '성서구'처럼 실제 존재하지 않는 행정구역인 경우, 실제 한국 행정구역(예: 성북구, 강남구 등)을 기준으로 가장 유사한 지명으로 수정해.\n"
+        "3. 확실하지 않으면 해당 항목은 null로 남겨.\n"
+        "4. 문장 전체가 아닌 요약된 키워드 형태로 작성하되 의미는 정확하게 전달해.\n"
+        "5. 반드시 JSON 형식을 지켜서 출력해."
         )
     }, {
         "role": "user",
@@ -40,6 +45,7 @@ def process_audio_and_get_structured_data(audio_path: str) -> dict:
     }]
 
     # 3. GPT 호출
+
     res = client.chat.completions.create(
         model="gpt-4.1",
         messages=conversation,
@@ -51,7 +57,7 @@ def process_audio_and_get_structured_data(audio_path: str) -> dict:
                         "endpoint": "https://ainuri-search.search.windows.net",
                         "index_name": "ainuri-index",
                         "authentication": {
-                            
+                                # 따로 ai search리소스 찾아 들어가서 설정 - 키 - 기본 관리자 키
                         },
                         "embedding_dependency": {
                             "type": "endpoint",
