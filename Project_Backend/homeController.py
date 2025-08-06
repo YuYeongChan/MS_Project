@@ -11,13 +11,67 @@ import shutil # shutil 임포트 유지
 import json # json 임포트 유지
 from datetime import datetime, timedelta
 import jwt
+#개인정보 수정
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, Header
+from pydantic import BaseModel
 
-SECRET_KEY = "YOUR_SECRET_KEY"
+sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+
+SECRET_KEY = SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your_jwt_secret_key_here_please_change_this_to_a_strong_key")
 ALGORITHM = "HS256"
 
-# `homeController.py`가 있는 `Project_Backend` 폴더의 부모 디렉토리 (MS_PROJECT_AINURI)를 sys.path에 추가합니다.
+# DAO 인스턴스 생성
+aDAO = AccountDAO()
+rDAO = RegistrationDAO()
+msDAO = ManagementStatusDAO()
+
+#JWT 함수들(개인정보수정 토큰)
+def decode_token(token: str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="토큰이 만료되었습니다.")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="유효하지 않은 토큰입니다.")
+
+# 개인정보 수정시 실시간을 하기위해 필요한거
+def issue_token(user_id: str):
+    user_info = aDAO.getUserInfo(user_id)
+
+    payload = {
+        "user_id": user_id,
+        "nickname": user_info["nickname"],
+        "name": user_info["name"],
+        "address": user_info["address"],
+        "resident_id_number": user_info["resident_id_number"],
+        "score": user_info["score"],
+        "profile_pic_url": user_info["profile_pic_url"],
+        "phone_number": user_info["phone_number"],
+        "role": "admin" if user_info.get("is_admin") else "user",
+        "exp": datetime.utcnow() + timedelta(hours=1)
+    }
+
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+    
+#개인정보 수정 
+class UpdateUserInfoRequest(BaseModel):
+    nickname: Optional[str]
+    phone_number: Optional[str]
+    address: Optional[str]
+
+
+UPLOAD_PROFILE_DIR = os.path.join(os.path.dirname(__file__), "profile_photos")
+#폴더가 없다면 생성
+os.makedirs(UPLOAD_PROFILE_DIR, exist_ok=True)
+
+# `homeController.py`가 있는 `Project_Backend` 폴더의 부모 디렉토리 (MS_PROJECT_AINURI)를 sys.path에 추가
 # 이렇게 하면 'ai' 폴더를 직접 패키지처럼 임포트할 수 있습니다.
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))) 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../ai"))) 
+# MS_PROJECT_AINURI 루트 경로 추가
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.append(PROJECT_ROOT)
 
 # 올바른 임포트 구문: 'ai' 패키지에서 함수를 가져옵니다.
 from ai.whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
@@ -27,17 +81,19 @@ from ai.whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
 
 # FastAPI 앱 생성
 app = FastAPI()
-# 서버 루트 기준 상대 경로 (이미 프로필 사진이 여기에 저장되고 있음)
-profile_photo_folder = os.path.join(os.path.dirname(__file__), 'profile_photos')
-
 router = APIRouter()
 
 
-# 폴더가 없다면 생성
-os.makedirs(profile_photo_folder, exist_ok=True)
+
 
 # "/profile_photos" 경로로 해당 폴더를 정적 파일 제공
-app.mount("/profile_photos", StaticFiles(directory=profile_photo_folder), name="profile_photos")
+app.mount("/profile_photos", StaticFiles(directory=UPLOAD_PROFILE_DIR), name="profile_photos")
+
+# registration_photos(공공시설물) 경로 설정
+registration_photo_folder = os.path.join(os.path.dirname(__file__), 'registration_photos')
+os.makedirs(registration_photo_folder, exist_ok=True)
+app.mount("/registration_photos", StaticFiles(directory=registration_photo_folder), name="registration_photos")
+
 from fastapi.responses import JSONResponse
 # ex ) http://195.168.9.232:1234/computer.get?page=1
 # uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
@@ -60,10 +116,6 @@ from fastapi.responses import JSONResponse
 #     allow_headers=["*"],         # 모든 HTTP 헤더 허용
 # )
 
-# DAO 인스턴스 생성
-aDAO = AccountDAO()
-rDAO = RegistrationDAO()
-msDAO = ManagementStatusDAO()
 
 # 회원가입 API 엔드포인트
 @app.post("/account.sign.up")
@@ -218,8 +270,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def upload_audio(file: UploadFile = File(...)):
     filename = file.filename
     save_path = os.path.join("uploaded_audios", filename)
-    save_path = os.path.abspath(save_path)  # ✅ 절대경로로 변환!
-
+    save_path = os.path.abspath(save_path)  #  절대경로로 변환!
     # 1. 파일 저장
     with open(save_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -228,7 +279,7 @@ async def upload_audio(file: UploadFile = File(...)):
     try:
         structured_result = process_audio_and_get_structured_data(save_path)
     except Exception as e:
-        print("❌ 구조화 중 오류 발생:", e)
+        print(" 구조화 중 오류 발생:", e)
         return JSONResponse(
             status_code=500,
             content={
@@ -241,7 +292,77 @@ async def upload_audio(file: UploadFile = File(...)):
         "message": "업로드 및 구조화 성공",
         "filename": filename,
         "path": save_path,
-        "result": structured_result  # 👈 React Native에서 이걸 받아서 detail 입력란에 사용
+        "result": structured_result  #  React Native에서 이걸 받아서 detail 입력란에 사용
     })
 
 
+
+@router.get("/analyze_audio")
+async def analyze_audio(filename: str):
+    path = os.path.join("uploaded_audios", filename)
+    if not os.path.exists(path):
+        return {"error": "파일이 존재하지 않음"}
+
+    result = process_audio_and_get_structured_data(path)
+    return result
+
+#개인정보수정 
+@app.patch("/update_user_info")
+async def update_user_info(
+    nickname: str = Form(None),
+    phone_number: str = Form(None),
+    address: str = Form(None),
+    profile_pic: UploadFile = File(None),
+    authorization: str = Header(...)
+):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization 헤더 형식 오류")
+
+    token = authorization[7:]
+    user_data = decode_token(token)
+    user_id = user_data["user_id"]
+
+    profile_pic_url = user_data.get("profile_pic_url")
+    if profile_pic:
+        try:
+            ext = os.path.splitext(profile_pic.filename)[-1]
+            new_filename = f"{user_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}{ext}"
+            file_path = os.path.join(UPLOAD_PROFILE_DIR, new_filename)
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(profile_pic.file, buffer)
+
+            profile_pic_url = new_filename
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"프로필 사진 저장 실패: {str(e)}")
+
+    # DB 업데이트
+    result = aDAO.updateUserInfo(
+        user_id,
+        nickname=nickname,
+        phone_number=phone_number,
+        address=address,
+        profile_pic_url=profile_pic_url
+    )
+
+    if result:
+        new_token = issue_token(user_id)
+        return {"message": "회원 정보 수정 완료", "token": new_token}
+    else:
+        raise HTTPException(status_code=500, detail="회원 정보 수정 실패")
+    
+    # 회원 탈퇴 (DELETE)
+@app.delete("/delete_account")
+def delete_account(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization 헤더 형식 오류")
+
+    token = authorization[7:]
+    user_data = decode_token(token)
+    user_id = user_data["user_id"]
+
+    result = aDAO.deleteUser(user_id)
+    if result:
+        return {"message": "회원 탈퇴 완료"}
+    else:
+        raise HTTPException(status_code=500, detail="회원 탈퇴 실패")

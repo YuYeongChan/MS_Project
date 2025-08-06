@@ -208,4 +208,19 @@ export const styles = StyleSheet.create({
       alignItems: 'center',       
       justifyContent: 'center',   
     },
-});
+    voiceModalButton:{
+    backgroundColor: "#E0E0E0",
+    borderRadius: 20,
+    marginTop: 100,
+    width:200,
+    height: 35,
+    alignItems: 'center',
+    paddingVertical: 4,
+    
+    },
+    voiceModalText:{
+      fontSize: 17,
+      color: "black",
+      fontFamily: 'PretendardGOV-Bold'
+    }  
+  });

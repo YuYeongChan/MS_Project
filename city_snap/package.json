@@ -9,6 +9,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@actbase/react-daum-postcode": "^1.0.4",
     "@expo/vector-icons": "^14.1.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/bottom-tabs": "^7.4.5",
@@ -30,7 +31,8 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.1",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "tslib": "^2.8.1"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

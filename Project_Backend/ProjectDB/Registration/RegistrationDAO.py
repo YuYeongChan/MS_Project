@@ -118,30 +118,42 @@ class RegistrationDAO:
         try:
             con, cur = SsyDBManager.makeConCur() 
             sql = """
-            SELECT report_id, latitude, longitude, location_description
+            SELECT report_id, latitude, longitude, location_description, details, photo_url, report_date, user_id
             FROM Reports 
             WHERE latitude IS NOT NULL AND longitude IS NOT NULL
             ORDER BY report_date DESC
-            """ #  SQL 문장 끝의 세미콜론(;)이 없어야 합니다. 
-            
+            """  # 필요한 모든 필드 포함
+
             print(f"Executing SQL in getAllDamageReportLocations: {sql}") 
 
             cur.execute(sql)
-            results = cur.fetchall() # 튜플 리스트 반환
+            results = cur.fetchall()
 
             processed_results = []
             for row in results:
-                # 튜플 인덱스로 접근하도록 수정 (SELECT 쿼리 순서에 맞춰서)
-                # report_id: 0, latitude: 1, longitude: 2, location_description: 3
+                # 튜플 인덱스 순서대로 매핑
+                details = row[4]
+                if hasattr(details, 'read'):  # 혹시 BLOB/TEXT 처리
+                    details = details.read()
+                    if isinstance(details, bytes):
+                        details = details.decode('utf-8')
+
                 processed_results.append({
                     "report_id": row[0],
                     "latitude": row[1],
                     "longitude": row[2],
-                    "address": row[3] # location_description 컬럼 (4번째, 인덱스 3)
+                    "address": row[3] or "주소 없음",
+                    "details": details or "내용 없음",
+                    "photo_url": row[5],
+                    "date": row[6].strftime("%Y-%m-%d") if row[6] else "날짜 없음",
+                    "nickname": row[7] or "익명",  # 닉네임 저장 안할 경우 user_id 그대로 사용
                 })
+
             return processed_results
+
         except Exception as e:
             print(f"ERROR in getAllDamageReportLocations: {e}")
             return None
         finally:
-            if cur: SsyDBManager.closeConCur(con, cur)
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
