@@ -230,9 +230,11 @@ class AccountDAO:
             if cur: SsyDBManager.closeConCur(con, cur)
     
     #--- 랭킹 조회 메서드
-    def getRanking(self, limit: int = 100):
+    def getRanking(self, userId: str, limit: int = 100):
         h = {"Access-Control-Allow-Origin": "*"}
         con, cur = None, None
+
+        # 상위 랭크 100명까지 조회
         try:
             con, cur = SsyDBManager.makeConCur()
             sql = """
@@ -253,11 +255,42 @@ class AccountDAO:
                     "rank": rank
                 })
 
-            return JSONResponse({"result": "랭킹 조회 성공", "ranking": ranking_list}, status_code=200, headers=h)
+        except Exception as e:
+            print(f"랭킹 조회 중 오류 발생: {e}")
+            return JSONResponse({"result": f"랭킹 조회 DB 오류: {e}"}, status_code=500, headers=h)
+        
+        # 내 등수 조회
+        try:
+            sql = """
+                SELECT profile_pic_url, user_id, nickname, score, RANK() OVER (ORDER BY score DESC) AS rank
+                FROM Users 
+                WHERE user_id = :userId
+                ORDER BY score DESC
+            """
+            cur.execute(sql, {'userId': userId})
+
+            myRanking = []
+            for profile, user_id, nickname, score, rank in cur:
+                myRanking.append({
+                    "profile_pic_url": profile,
+                    "user_id": user_id,
+                    "nickname": nickname,
+                    "score": score,
+                    "rank": rank
+                })
+
+            rankingData = {
+                "result": "랭킹 조회 성공",
+                "ranking": ranking_list,
+                "myRanking": myRanking
+            }
+
+            return JSONResponse(rankingData, status_code=200, headers=h)
 
         except Exception as e:
             print(f"랭킹 조회 중 오류 발생: {e}")
             return JSONResponse({"result": f"랭킹 조회 DB 오류: {e}"}, status_code=500, headers=h)
+        
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
     
