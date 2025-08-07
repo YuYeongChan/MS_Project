@@ -18,8 +18,8 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DamageScreen from './src/contents/DamageScreen';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
+import MyReportsScreen from './src/contents/MyReportsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -114,6 +114,7 @@ export default function App() {
           <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
 
           <Stack.Screen name="EditUserInfoScreen" component={EditUserInfoScreen} />
+          <Stack.Screen name="MyReportsScreen" component={MyReportsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </View>
