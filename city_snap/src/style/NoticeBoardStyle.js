@@ -129,6 +129,15 @@ export const styles = StyleSheet.create({
         fontFamily: 'PretendardGOV-Bold',
         color: "#888",
         marginLeft: 'auto',
+        marginTop: 5,
+    },
+    modalAdmin: {
+        fontSize: 14,
+        color: "#888",
+        fontFamily: 'PretendardGOV-Regular',
+        marginLeft: 'auto',
+        marginRight: 3,
+        marginTop: 5,
     },
     modalContentText: {
         fontSize: 15,

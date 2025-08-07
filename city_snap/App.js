@@ -19,6 +19,7 @@ import { useCallback } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
+import MyReportsScreen from './src/contents/MyReportsScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
 
 const Stack = createNativeStackNavigator();
@@ -118,6 +119,7 @@ export default function App() {
           <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
 
           <Stack.Screen name="EditUserInfoScreen" component={EditUserInfoScreen} />
+          <Stack.Screen name="MyReportsScreen" component={MyReportsScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </View>

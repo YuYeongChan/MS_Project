@@ -1,4 +1,5 @@
 import os
+
 from datetime import datetime
 
 from fastapi.responses import JSONResponse
@@ -36,7 +37,19 @@ class RegistrationDAO:
 
         try:
             con, cur = SsyDBManager.makeConCur()
-            parsed_report_date = datetime.strptime(report_date, "%Y-%m-%d")
+
+            # --- 날짜/시간 파싱 (시분초 없으면 현재 시간 붙임) ---
+            try:
+                parsed_report_date = datetime.strptime(report_date, "%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                try:
+                    date_only = datetime.strptime(report_date, "%Y-%m-%d")
+                    now_time = datetime.now().time()
+                    parsed_report_date = datetime.combine(date_only.date(), now_time)
+                except ValueError as ve:
+                    error_msg = f"날짜 형식 오류: {report_date} - {ve}"
+                    print(f"ERROR: {error_msg}")
+                    return JSONResponse({"result": "신고 실패", "error": error_msg}, status_code=400, headers=h)
 
             sql = """
                 INSERT INTO Reports (
@@ -156,4 +169,83 @@ class RegistrationDAO:
             return None
         finally:
             if cur:
+                SsyDBManager.closeConCur(con, cur)
+        
+        # 자기가 신고한 시설물 확인
+    def getUserReports(self, user_id):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                SELECT report_id, user_id, photo_url, location_description, latitude, longitude, report_date, details
+                FROM Reports
+                WHERE user_id = :user_id
+                ORDER BY report_date DESC
+            """
+            cur.execute(sql, {"user_id": user_id})
+            rows = cur.fetchall()
+
+            result = []
+            for r in rows:
+                details_data = r[7]
+                if hasattr(details_data, "read"):  # BLOB/TEXT 처리
+                    details_data = details_data.read()
+                    if isinstance(details_data, bytes):
+                        details_data = details_data.decode("utf-8")
+
+                result.append({
+                    "report_id": r[0],
+                    "user_id": r[1],
+                    "photo_url": r[2],
+                    "location_description": r[3],
+                    "latitude": r[4],
+                    "longitude": r[5],
+                    "report_date": r[6].strftime("%Y-%m-%d %H:%M:%S") if r[6] else None,
+                    "details": details_data,
+                })
+
+            return {"result": "조회 성공", "reports": result}
+
+        except Exception as e:
+            print(f"ERROR in getUserReports: {str(e)}")
+            return {"result": "조회 실패", "error": str(e)}
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    # 유저 신고 내용삭제
+    def get_report_by_id(self, report_id: int):
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            cur.execute("SELECT * FROM REPORTS WHERE REPORT_ID = :id", {"id": report_id})
+            row = cur.fetchone()
+            if row:
+                return {
+                    "report_id": row[0],
+                    "user_id": row[1],
+                    "location_description": row[2],
+                    # 필요한 컬럼 추가
+                }
+            return None
+        except Exception as e:
+            print("DB 오류:", e)
+            return None
+        finally:
+            if con and cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    def delete_report_by_id(self, report_id: int):
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            cur.execute("DELETE FROM REPORTS WHERE REPORT_ID = :id", {"id": report_id})
+            con.commit()
+            return True
+        except Exception as e:
+            print("삭제 실패:", e)
+            return False
+        finally:
+            if con and cur:
                 SsyDBManager.closeConCur(con, cur)

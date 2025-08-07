@@ -33,6 +33,26 @@ function MainScreen() {
                         style={main_styles.mapImage}
                     />
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={main_styles.reportBox}
+                    onPress={() => navigation.navigate("MyReportsScreen")}
+                >
+                    <Image
+                        source={require('./img/problemReport.png')} // 신고 관련 아이콘 이미지 추가 필요
+                        style={main_styles.reportImage}
+                    />
+                    <View style={main_styles.reportTextContainer}>
+                        <Text style={main_styles.reportTitle}>내 신고 내역 보기</Text>
+                        <Text style={main_styles.reportSubtitle}>
+                            내가 신고한 공공기물 파손 내역을 확인하세요
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+                
+
+
+
             </View>
         </ScrollView>
     );
