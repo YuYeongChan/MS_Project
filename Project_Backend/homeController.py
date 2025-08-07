@@ -1,12 +1,12 @@
 import sys
 import os
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTasks, APIRouter # APIRouter 임포트 유지
+from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTasks, APIRouter,Query # APIRouter 임포트 유지
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from ProjectDB.Notice.noticeDAO import NoticeDAO
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional
+from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles
 import shutil # shutil 임포트 유지
 import json # json 임포트 유지
@@ -27,6 +27,7 @@ aDAO = AccountDAO()
 rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
+regDAO = RegistrationDAO()
 
 #JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
@@ -213,6 +214,7 @@ def addManagementStatus(
 @app.get("/management.status.list")
 def getManagementStatusList():
     return msDAO.getAllStatuses()
+
 @app.get("/get_user_info/{user_id}")
 def get_user_info(user_id: str):
     """
@@ -381,3 +383,65 @@ def get_notices():
         return notices.body
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+    
+    #신고한 유저가 자기가 신고한 목록 보기위해 필요한거
+@app.get("/my_reports")
+async def my_reports(user_id: str = Query(..., description="조회할 사용자 ID")):
+    return regDAO.getUserReports(user_id)
+
+    #유저 신고한 내역 확인할때 유저 정보 확인
+@app.get("/me")
+def get_my_info(authorization: str = Header(...)):
+    """
+    JWT 토큰을 통해 현재 로그인한 사용자 정보를 반환합니다.
+    React Native 클라이언트에서 로그인 확인용으로 사용됩니다.
+    """
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization 헤더 형식 오류")
+
+    token = authorization[7:]
+    try:
+        user_data = decode_token(token)
+    except HTTPException as e:
+        raise e
+
+    # 프론트에 필요한 정보만 수정 가능
+    return {
+        "user_id": user_data.get("user_id"),
+        "nickname": user_data.get("nickname"),
+        "name": user_data.get("name"),
+        "address": user_data.get("address"),
+        "score": user_data.get("score"),
+        "profile_pic_url": user_data.get("profile_pic_url"),
+        "phone_number": user_data.get("phone_number"),
+        "role": user_data.get("role")
+    }
+
+    # 유저가 신고한 내용 삭제 기능
+def get_current_user(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization 헤더 형식 오류")
+
+    token = authorization[7:]  # "Bearer " 제거
+    return decode_token(token)
+
+@app.delete("/my_reports/{report_id}")
+def delete_my_report(report_id: int, current_user: Dict = Depends(get_current_user)):
+    """
+    현재 로그인한 사용자가 작성한 신고만 삭제할 수 있음
+    """
+    # 신고가 존재하는지 확인
+    report = rDAO.get_report_by_id(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="신고 내역을 찾을 수 없습니다.")
+
+    # 사용자 권한 확인
+    if report["user_id"] != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="본인의 신고만 삭제할 수 있습니다.")
+
+    try:
+        rDAO.delete_report_by_id(report_id)
+        return {"message": "삭제 성공"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")

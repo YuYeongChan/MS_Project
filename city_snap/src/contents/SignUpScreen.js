@@ -273,10 +273,24 @@ const SignUpScreen = ({ navigation }) => {
           style={signUpStyles.input}
           placeholder="전화번호 (010-1234-5678)"
           value={phoneNumber}
-          onChangeText={setPhoneNumber}
+          onChangeText={(text) => {
+            // 숫자만 추출
+            let cleaned = text.replace(/[^0-9]/g, "");
+
+            // 패턴 적용: 010-1234-5678
+            if (cleaned.length < 4) {
+              cleaned = cleaned;
+            } else if (cleaned.length < 8) {
+              cleaned = cleaned.replace(/(\d{3})(\d{0,4})/, "$1-$2");
+            } else {
+              cleaned = cleaned.replace(/(\d{3})(\d{4})(\d{0,4})/, "$1-$2-$3");
+            }
+
+            setPhoneNumber(cleaned);
+          }}
           keyboardType="phone-pad"
           maxLength={13}
-        />
+      />
 
         {/* 주소 검색 */}
         <View style={{ flexDirection: "row", alignItems: "center", width: "100%" }}>
@@ -307,7 +321,19 @@ const SignUpScreen = ({ navigation }) => {
           style={signUpStyles.input}
           placeholder="주민등록번호 (123456-1234567)"
           value={residentIdNumber}
-          onChangeText={setResidentIdNumber}
+          onChangeText={(text) => {
+            // 숫자만 추출
+            let cleaned = text.replace(/[^0-9]/g, "");
+
+            // 패턴 적용: 123456-1234567
+            if (cleaned.length < 7) {
+              cleaned = cleaned;
+            } else {
+              cleaned = cleaned.replace(/(\d{6})(\d{0,7})/, "$1-$2");
+            }
+
+            setResidentIdNumber(cleaned);
+          }}
           keyboardType="numeric"
           maxLength={14}
         />
