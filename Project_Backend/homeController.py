@@ -4,6 +4,7 @@ from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTa
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
+from ProjectDB.Notice.noticeDAO import NoticeDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +26,7 @@ ALGORITHM = "HS256"
 aDAO = AccountDAO()
 rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
+nDAO = NoticeDAO()
 regDAO = RegistrationDAO()
 
 #JWT 함수들(개인정보수정 토큰)
@@ -166,11 +168,11 @@ def checkUserId(user_id: str):
         return {"result": "사용 가능한 사용자 ID입니다."}
     
 @app.get("/account.ranking")
-def getRanking():
+def getRanking(user_id: str):
     # 사용자 랭킹을 조회
     # 랭킹은 점수(score) 기준으로 내림차순 정렬
     try:
-        ranking = aDAO.getRanking()
+        ranking = aDAO.getRanking(user_id)
         if not ranking:
             return JSONResponse(status_code=404, content={"error": "랭킹 정보가 없습니다."})
         return ranking.body
@@ -368,6 +370,19 @@ def delete_account(authorization: str = Header(...)):
         return {"message": "회원 탈퇴 완료"}
     else:
         raise HTTPException(status_code=500, detail="회원 탈퇴 실패")
+    
+@app.get("/get_notices")
+def get_notices():
+    """
+    공지사항 목록을 조회합니다.
+    """
+    try:
+        notices = nDAO.getNotices()
+        if not notices:
+            return JSONResponse(status_code=404, content={"error": "공지사항이 없습니다."})
+        return notices.body
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})
     
     
     #신고한 유저가 자기가 신고한 목록 보기위해 필요한거
