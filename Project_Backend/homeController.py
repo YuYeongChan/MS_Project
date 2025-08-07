@@ -4,6 +4,7 @@ from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTa
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
+from ProjectDB.Notice.noticeDAO import NoticeDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
@@ -25,6 +26,7 @@ ALGORITHM = "HS256"
 aDAO = AccountDAO()
 rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
+nDAO = NoticeDAO()
 
 #JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
@@ -366,3 +368,16 @@ def delete_account(authorization: str = Header(...)):
         return {"message": "회원 탈퇴 완료"}
     else:
         raise HTTPException(status_code=500, detail="회원 탈퇴 실패")
+    
+@app.get("/get_notices")
+def get_notices():
+    """
+    공지사항 목록을 조회합니다.
+    """
+    try:
+        notices = nDAO.getNotices()
+        if not notices:
+            return JSONResponse(status_code=404, content={"error": "공지사항이 없습니다."})
+        return notices.body
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": str(e)})

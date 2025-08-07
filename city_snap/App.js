@@ -18,7 +18,6 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useCallback } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import DamageScreen from './src/contents/DamageScreen';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
 
