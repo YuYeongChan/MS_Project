@@ -23,7 +23,7 @@ export default function TopBar() {
             <TouchableOpacity onPress={() => {alert("알림 조회")}}>
                 <Ionicons 
                     name="notifications-outline" 
-                    size={35} 
+                    size={30} 
                     color="#F9F9F9"
                 />
             </TouchableOpacity>

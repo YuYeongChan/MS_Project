@@ -59,6 +59,9 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontFamily: 'PretendardGOV-Bold',
+    overflow: 'hidden',      // 말줄임표 처리를 위해 필요
+    textOverflow: 'ellipsis', // 웹 스타일이지만 의미 전달용
+    whiteSpace: 'nowrap',    // 웹에서 쓰는 방식 (RN에선 numberOfLines로 처리)
   },
   score: {
     fontSize: 17,
