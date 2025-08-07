@@ -54,4 +54,37 @@ export const main_styles = StyleSheet.create({
         color: "#436D9D",
         fontFamily: 'PretendardGOV-Bold',
     },
+
+    // 새로 추가: 신고 내역 카드 스타일
+    reportBox: {
+        backgroundColor: "#ECECEC",
+        borderRadius: 20,
+        flexDirection: "row",
+        alignItems: "center",
+        padding: 15,
+        marginTop:40, 
+        marginBottom: 15,
+        ...shadow,
+    },
+    reportImage: {
+        width: 80,
+        height: 80,
+        borderRadius: 10,
+        marginRight: 15,
+    },
+    reportTextContainer: {
+        flex: 1,
+    },
+    reportTitle: {
+        fontSize: 16,
+        fontFamily: "PretendardGOV-Bold",
+        color: "#333",
+        marginBottom: 5,
+    },
+    reportSubtitle: {
+        fontSize: 14,
+        color: "#666",
+        fontFamily: "PretendardGOV-Regular",
+    },
+
 });

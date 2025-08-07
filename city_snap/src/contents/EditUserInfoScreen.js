@@ -125,9 +125,23 @@ const EditUserInfoScreen = () => {
       <TextInput
         style={styles.input}
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
-        keyboardType="phone-pad"
+        onChangeText={(text) => {
+      
+          let digits = text.replace(/[^0-9]/g, '');
+
+          if (digits.length > 11) digits = digits.substring(0, 11);
+
+          if (digits.length < 4) {
+            setPhoneNumber(digits);
+          } else if (digits.length < 8) {
+            setPhoneNumber(`${digits.slice(0, 3)}-${digits.slice(3)}`);
+          } else {
+            setPhoneNumber(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`);
+          }
+        }}
+        keyboardType="number-pad"
         placeholder="010-0000-0000"
+        maxLength={13} 
       />
 
       <Text style={styles.label}>주소</Text>
