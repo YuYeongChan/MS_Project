@@ -47,6 +47,10 @@ function UserTabNavigator() {
             fontFamily: 'PretendardGOV-Bold',
           },
 
+          tabBarItemStyle: {
+            paddingTop: 5,     // 전체 탭 아이템 내에서 아이콘과 텍스트의 위치 조정
+          },
+
           // tab icon 설정
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;

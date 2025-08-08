@@ -79,7 +79,13 @@ export default function RankingScreen() {
         <View style={styles.myItem}>
           <Text style={styles.rank}>{item.rank}</Text>
           {avatarWithCrown}
-          <Text style={styles.nickname}>{item.nickname}</Text>
+          <Text
+            style={styles.nickname}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.nickname}
+          </Text>
           <Text style={styles.myScore}>{item.score}</Text>
         </View>
       );
@@ -88,7 +94,13 @@ export default function RankingScreen() {
         <View style={styles.item}>
           <Text style={styles.rank}>{item.rank}</Text>
           {avatarWithCrown}
-          <Text style={styles.nickname}>{item.nickname}</Text>
+          <Text
+            style={styles.nickname}
+            numberOfLines={1}
+            ellipsizeMode="tail"
+          >
+            {item.nickname}
+          </Text>
           <Text style={styles.score}>{item.score}</Text>
         </View>
       );
@@ -118,7 +130,13 @@ export default function RankingScreen() {
               {myRanking}
             </Text>
             <Image source={{ uri: `${API_BASE_URL}/profile_photos/${userInfo.profile_pic_url}` }} style={styles.avatar}/>
-            <Text style={styles.nickname}>{userInfo.nickname}</Text>
+            <Text
+              style={styles.nickname}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {userInfo.nickname}
+            </Text>
             <Text style={styles.myScore}>{userInfo.score}</Text>
           </View>
         )}

@@ -24,7 +24,8 @@ class NoticeDAO:
                     "id": notice_id,
                     "title": title,
                     "content": content.read(),
-                    "date": created_date.strftime("%Y-%m-%d"),
+                    "date": created_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "notice_date": created_date.strftime("%Y-%m-%d"),
                     "admin_name": created_by,
                     "type": notice_type,
                     "fixed": True if is_pinned == "Y" else False

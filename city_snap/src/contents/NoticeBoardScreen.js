@@ -14,20 +14,6 @@ function NoticeBoardScreen() {
     const PAGE_SIZE = 4;
 
     useEffect(() => {
-        // const testData = [
-        //     { id: 11, title: "맨홀 파손 이유 및 대체 방안", content: "내용", date: "2025-08-05", admin_name: "이길동", type: 1, fixed: false},
-        //     { id: 9, title: "7월 수리 현황", content: "내용", date: "2025-09-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 8, title: "6월 수리 현황", content: "내용", date: "2025-09-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 7, title: "5월 수리 현황", content: "내용", date: "2025-09-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 6, title: "4월 수리 현황", content: "내용", date: "2025-09-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 5, title: "3월 수리 현황", content: "내용", date: "2025-09-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 4, title: "2월 수리 현황", content: "내용", date: "2025-07-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 3, title: "1월 수리 현황", content: "내용", date: "2025-08-01", admin_name: "박길동", type: 2, fixed: false},
-        //     { id: 2, title: "등록 후 처리 과정 안내", content: "내용", date: "2023-10-02", admin_name: "김길동", type: 0, fixed: true},
-        //     { id: 1, title: "업로드 시 주의사항!", content: "내용", date: "2023-10-01", admin_name: "홍길동", type: 0, fixed: true},
-        // ];
-        // setNotices(testData);
-        // setLoading(false);
         fetch(`${API_BASE_URL}/get_notices`)
             .then((response) => response.json())
             .then(data => {
@@ -81,7 +67,7 @@ function NoticeBoardScreen() {
                                         <Ionicons name="flag" size={20} style={{ marginRight: 8 }} color="#888" />
                                         <Ionicons name={icon} size={24} color={iconColor} />
                                         <Text style={styles.noticeTitle}>{item.title}</Text>
-                                        <Text style={styles.noticeDate}>{item.date}</Text>
+                                        <Text style={styles.noticeDate}>{item.notice_date}</Text>
                                     </TouchableOpacity>
                                 );
                             })}
@@ -107,7 +93,7 @@ function NoticeBoardScreen() {
                                     >
                                         <Ionicons name={icon} size={24} color={iconColor} />
                                         <Text style={styles.noticeTitle}>{item.title}</Text>
-                                        <Text style={styles.noticeDate}>{item.date}</Text>
+                                        <Text style={styles.noticeDate}>{item.notice_date}</Text>
                                     </TouchableOpacity>
                                 );
                             })}
@@ -140,8 +126,10 @@ function NoticeBoardScreen() {
                             <View style={styles.modalContent}>
                                 <View style={styles.modalContentHeader}>
                                     <Text style={styles.modalTitle}>{selectedNotice?.title}</Text>
-                                    <Text style={styles.modalDate}>{selectedNotice?.date}</Text>
+                                    
                                 </View>
+                                <Text style={styles.modalDate}>{selectedNotice?.date}</Text>
+                                <Text style={styles.modalAdmin}>작성자: {selectedNotice?.admin_name}</Text>
                                 <Text style={styles.modalContentText}>{selectedNotice?.content}</Text>
                                 <TouchableOpacity style={styles.modalButton} onPress={() => setVisible(false)}>
                                     <Text style={styles.modalButtonText}>닫기</Text>
