@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
+  ActivityIndicator, //  로딩 인디케이터를 위해 추가
   ScrollView, // 추가
 } from "react-native";
 import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
@@ -21,8 +21,10 @@ import { API_BASE_URL } from "../utils/config";
 import axios from "axios";
 import { googleMapsApiKey } from "../utils/config";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useNavigation } from "@react-navigation/native";  //메인 스크린이동
 
 const PublicPropertyReportScreen = () => {
+  const navigation = useNavigation();  //메인 스크린이동
   const [photo, setPhoto] = useState(null);
   const [detail, setDetail] = useState("");
   const [visible, setVisible] = useState(false);
@@ -35,7 +37,7 @@ const PublicPropertyReportScreen = () => {
   const [recording, setRecording] = useState(null);
   const [audioUri, setAudioUri] = useState(null);
   const [voiceState, setVoiceState] = useState("idle");
-
+  
   useEffect(() => {
     if (!date) {
       const today = new Date();
@@ -62,7 +64,7 @@ const PublicPropertyReportScreen = () => {
     }
   };
 
-  // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
+  //  handleLocation 함수가 이제 주소 정보도 함께 받습니다.
 
   const handleLocation = (coords) => {
     setTempSelectedLocation(coords);
@@ -136,6 +138,8 @@ const PublicPropertyReportScreen = () => {
         setLocation(null);
         setVisible(false);
         setModalType(null);
+
+        navigation.navigate("UserTabNavigator", { screen: "MainScreen" });
       } else {
         Alert.alert(
           "신고 실패",
