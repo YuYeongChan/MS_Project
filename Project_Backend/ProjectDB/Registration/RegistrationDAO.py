@@ -28,7 +28,7 @@ class RegistrationDAO:
             with open(file_path, "wb") as f:
                 f.write(content)
 
-            photo_url_for_db = f"/registration_photos/{filename}" 
+            photo_url_for_db = filename   
 
         except Exception as e:
             error_msg = f"신고 사진 저장 실패 (파일 시스템): {str(e)}"

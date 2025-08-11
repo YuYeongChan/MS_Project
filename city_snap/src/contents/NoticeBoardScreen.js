@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, TouchableOpacity, ScrollView, Modal } fr
 import { styles } from "../style/NoticeBoardStyle";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
+import { API_BASE_URL } from '../utils/config';
 
 function NoticeBoardScreen() {
     const [notices, setNotices] = useState([]);
