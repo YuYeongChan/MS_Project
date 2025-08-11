@@ -109,10 +109,13 @@ export default function DamageMapScreen() {
           transform: translateX(-50%);
           background: white;
           border-radius: 12px;
-          padding: 40px 16px 16px;
+          padding-top: 15px;
+          padding-right: 15px;
+          padding-left: 15px;
           box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
-          max-width: 300px;
-          font-size: 14px;
+          width: 80%;
+          height: 40%;
+          font-size: 16px;
           display: none;
           z-index: 9999;
           font-family: 'PretendardGOV-Regular', sans-serif;
@@ -137,29 +140,59 @@ export default function DamageMapScreen() {
           color: #333;
         }
 
-        #infoBox img {
-          width: 100%;
-          border-radius: 8px;
-          margin-top: 10px;
-          object-fit: cover;
-          max-height: 160px;
-        }
-
         #infoBox .closeBtn {
           position: absolute;
-          top: 8px;
-          right: 8px;
+          top: -35px;
+          right: 0px;
           background: #f44336;
           color: white;
           border: none;
           border-radius: 50%;
-          width: 24px;
-          height: 24px;
+          width: 30px;
+          height: 30px;
           text-align: center;
           line-height: 22px;
           cursor: pointer;
-          font-size: 14px;
+          font-size: 16px;
           box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+        }
+
+        #infoBox .image-container {
+          margin-top: 10px;
+          width: 290px;
+          height: 150px;
+          overflow: hidden;
+          position: relative;
+          border-radius: 8px;
+        }
+
+        #infoBox img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          object-position: center;
+          display: block;
+        }
+
+        #infoBox span{
+          font-weight: bold;
+          font-size: 18px;
+          margin-bottom: 8px;
+          padding-bottom: 5px;
+          display: inline-block;
+          border-bottom: 2px solid #436d9de7;
+          width: 100%;
+        }
+
+        #infoBox .description {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.5;
+          max-height: calc(1.5em * 2);
+          white-space: pre-line;
         }
       </style>
       <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
@@ -202,11 +235,12 @@ export default function DamageMapScreen() {
 
         function showInfoBox(location, marker) {
           infoContent.innerHTML = \`
-            <strong>주소:</strong> \${location.address}<br/>
-            <strong>세부 내용:</strong> \${location.details}<br/>
-            <strong>날짜:</strong> \${location.date}<br/>
-            <strong>작성자:</strong> \${location.nickname}<br/>
-            <img src="\${location.photo_url}" />
+            <span>\${location.address}</span><br/>
+            <strong>\${location.date}</strong><br/>
+            <div class="description">\${location.details}</div>
+            <div class="image-container">
+              <img src="\${location.photo_url}" />
+            </div>
           \`;
           infoBox.style.display = "block";
 

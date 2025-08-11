@@ -383,8 +383,37 @@ def get_notices():
         return notices.body
     except Exception as e:
         return JSONResponse(status_code=500, content={"error": str(e)})
-    
-    
+
+@app.get("/delete_notices")    
+def delete_notices(id:str):
+    return nDAO.deleteNotice(id)
+
+@app.post("/create_notice")
+def create_notice(
+    title: str = Form(...),
+    content: str = Form(...),
+    created_by: str = Form(...),
+    notice_type: int = Form(...),
+    is_pinned: str = Form(...) # 'Y' or 'N'
+):
+    """
+    새로운 공지사항을 등록합니다.
+    (Form 데이터로 받도록 수정)
+    """
+    try:
+        # DAO 함수를 호출하여 DB에 저장
+        result = nDAO.createNotice(
+            title=title,
+            content=content,
+            created_by=created_by,
+            notice_type=notice_type,
+            is_pinned=is_pinned
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
     #신고한 유저가 자기가 신고한 목록 보기위해 필요한거
 @app.get("/my_reports")
 async def my_reports(user_id: str = Query(..., description="조회할 사용자 ID")):
