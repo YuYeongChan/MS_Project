@@ -189,7 +189,8 @@ async def registrationWrite(
     longitude: float = Form(...),
     user_id: str = Form(...),
     details: str = Form(...),
-    report_date: str = Form(...)
+    report_date: str = Form(...),
+    is_normal: int = Form(0)  # ← 0/1 로 받기
 ):
     return await rDAO.registerFacility(photo, location_description, latitude, longitude, user_id, details, report_date)
 

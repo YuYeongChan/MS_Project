@@ -15,7 +15,7 @@ export default function AdminLayout({ route }) {
   const navigation = useNavigation();
   const initialRoute = route?.params?.initialRoute ?? 'Damage';
 
-  // ✅ 안드로이드 뒤로가기 버튼 핸들링
+  //  안드로이드 뒤로가기 버튼 핸들링
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
       navigation.goBack(); // AdminMainScreen으로 돌아감
