@@ -16,8 +16,8 @@ model = whisper.load_model("base")
 
 # Azure OpenAI 클라이언트 설정
 client = AzureOpenAI(
-    azure_endpoint="https://team01-05-4067-resource.openai.azure.com/",
-    api_version="2024-12-01-preview", 
+            azure_endpoint="https://team01-05-4067-resource.openai.azure.com/",
+            api_version="2024-12-01-preview", 
 )
 
 #  핵심 함수 정의

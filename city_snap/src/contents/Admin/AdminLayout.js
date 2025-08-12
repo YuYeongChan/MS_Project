@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AdminDamageContent from './AdminDamageContent';
 import AdminNoticeContent from './AdminNoticeContent';
 import AdminRankingContent from './AdminRankingContent';
+import AdminReportListScreen from './AdminReportListScreen'; 
 
 const Tab = createBottomTabNavigator();
 
@@ -65,6 +66,16 @@ export default function AdminLayout({ route }) {
             tabBarLabel: "순위표",
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="trophy" color={color} size={size} />
+            ),
+          }}
+        />
+        <Tab.Screen
+          name="ReportList"
+          component={AdminReportListScreen}
+          options={{
+            tabBarLabel: "전체 신고",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="file-tray-full" color={color} size={size} />
             ),
           }}
         />

@@ -490,3 +490,22 @@ def update_notice(
     is_pinned: str = Form(...) # 'Y' or 'N'
 ):
     return nDAO.updateNotice(notice_id, title, content, notice_type, is_pinned)
+
+@app.get("/admin/all_reports")
+def get_all_reports_for_admin():
+    """관리자 페이지를 위한 모든 신고 목록을 조회합니다."""
+    return rDAO.getAllReportsForAdmin()
+
+@app.get("/report_details/{report_id}")
+def get_report_details(report_id: int):
+    """특정 신고의 모든 상세 정보를 조회합니다."""
+    return rDAO.getReportDetailsById(report_id)
+
+@app.post("/update_report_status/{report_id}")
+def update_report_status(
+    report_id: int,
+    is_normal: int = Form(...), # 0=파손, 1=정상
+    repair_status: int = Form(...)  # 0=수리 대기, 1=수리 완료
+):
+    """신고의 파손 및 수리 상태를 업데이트합니다."""
+    return rDAO.updateReportStatuses(report_id, is_normal, repair_status)

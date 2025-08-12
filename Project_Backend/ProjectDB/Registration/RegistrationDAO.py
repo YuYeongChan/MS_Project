@@ -375,3 +375,152 @@ class RegistrationDAO:
             return JSONResponse({"result": "DB 오류", "error": str(e)}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
+
+
+    # 1. 관리자용 전체 목록 조회
+    def getAllReportsForAdmin(self):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                SELECT report_id, location_description, report_date, user_id, 
+                       is_normal, repair_status, photo_url
+                FROM registrations 
+                ORDER BY report_id DESC
+            """
+            cur.execute(sql)
+            
+            report_list = []
+            for r_id, loc, date, u_id, is_norm, rep_stat, p_url in cur:
+                report_list.append({
+                    "id": r_id,
+                    "location": loc,
+                    "date": date.strftime("%Y-%m-%d"),
+                    "user_id": u_id,
+                    "is_normal": is_norm,
+                    "repair_status": rep_stat,
+                    "photo_url": p_url
+                })
+            return JSONResponse(report_list, headers=h)
+        except Exception as e:
+            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # 2. 신고 1건의 모든 상세 정보 조회
+    def getReportDetailsById(self, report_id):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = "SELECT * FROM registrations WHERE report_id = :1"
+            cur.execute(sql, [report_id])
+            # 컬럼 이름 리스트를 가져옵니다.
+            column_names = [desc[0].lower() for desc in cur.description]
+            data = cur.fetchone()
+
+            if data:
+                report_dict = dict(zip(column_names, data))
+                # LOB 및 날짜 타입 처리
+                if report_dict.get('details') and hasattr(report_dict['details'], 'read'):
+                    report_dict['details'] = report_dict['details'].read()
+                if report_dict.get('report_date') and hasattr(report_dict['report_date'], 'strftime'):
+                    report_dict['report_date'] = report_dict['report_date'].strftime("%Y-%m-%d %H:%M:%S")
+                return JSONResponse(report_dict, headers=h)
+            else:
+                return JSONResponse({"error": "Report not found"}, status_code=404, headers=h)
+        except Exception as e:
+            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+
+
+    # 1. 관리자용 전체 목록 조회
+    def getAllReportsForAdmin(self):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                SELECT REPORT_ID, LOCATION_DESCRIPTION, REPORT_DATE, USER_ID, 
+                       IS_NORMAL, REPAIR_STATUS, PHOTO_URL
+                FROM REPORTS 
+                ORDER BY REPORT_ID DESC
+            """
+            cur.execute(sql)
+            
+            report_list = []
+            for r_id, loc, date, u_id, is_norm, rep_stat, p_url in cur:
+                report_list.append({
+                    "id": r_id,
+                    "location": loc,
+                    "date": date.strftime("%Y-%m-%d") if date else None,
+                    "user_id": u_id,
+                    "is_normal": is_norm,
+                    "repair_status": rep_stat,
+                    "photo_url": p_url
+                })
+            return JSONResponse(report_list, headers=h)
+        except Exception as e:
+            print(f"ERROR in getAllReportsForAdmin: {e}") 
+            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # 2. 신고 1건의 모든 상세 정보 조회
+    def getReportDetailsById(self, report_id):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            # --- [수정] 테이블명을 REPORTS로, 컬럼명을 REPORT_ID로 변경 ---
+            sql = "SELECT * FROM REPORTS WHERE REPORT_ID = :1"
+            # --------------------------------------------------------
+            cur.execute(sql, [report_id])
+            
+            # DB의 대문자 컬럼명을 가져와서 소문자로 변환
+            column_names = [desc[0].lower() for desc in cur.description]
+            data = cur.fetchone()
+
+            if data:
+                report_dict = dict(zip(column_names, data))
+                # LOB 및 날짜 타입 처리
+                if report_dict.get('details') and hasattr(report_dict['details'], 'read'):
+                    report_dict['details'] = report_dict['details'].read()
+                if report_dict.get('report_date') and hasattr(report_dict['report_date'], 'strftime'):
+                    report_dict['report_date'] = report_dict['report_date'].strftime("%Y-%m-%d %H:%M:%S")
+                return JSONResponse(report_dict, headers=h)
+            else:
+                return JSONResponse({"error": "Report not found"}, status_code=404, headers=h)
+        except Exception as e:
+            # 터미널에 진짜 오류 원인을 출력합니다.
+            print(f"ERROR in getReportDetailsById: {e}")
+            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # 3. 신고 상태 업데이트 (is_normal, repair_status 동시 변경)
+    def updateReportStatuses(self, report_id, is_normal, repair_status):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                UPDATE REPORTS 
+                SET IS_NORMAL = :is_normal, REPAIR_STATUS = :repair_status
+                WHERE REPORT_ID = :report_id
+            """
+            # --------------------------------------------------------
+            cur.execute(sql, {"is_normal": is_normal, "repair_status": repair_status, "report_id": report_id})
+            con.commit()
+
+            if cur.rowcount > 0:
+                return JSONResponse({'result': 'success'}, headers=h)
+            else:
+                return JSONResponse({'error': 'Update failed or report not found'}, status_code=404, headers=h)
+        except Exception as e:
+            return JSONResponse({'error': f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur and con: SsyDBManager.closeConCur(con, cur)
