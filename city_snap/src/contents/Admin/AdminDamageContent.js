@@ -15,13 +15,35 @@ export default function AdminDamageContent() {
     const init = async () => {
       try {
         if (USE_MOCK_ONLY) {
-          setDamageLocations(ensureUiFields(MOCK_DATA));
+          // MOCK 사용 시에도 setState 실행
+          setDamageLocations(
+            ensureUiFields(
+              MOCK_DATA.filter(
+                (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
+              )
+            )
+          );
         } else {
           const ok = await fetchDamageLocations();
-          if (!ok) setDamageLocations(ensureUiFields(MOCK_DATA));
+          if (!ok) {
+            setDamageLocations(
+              ensureUiFields(
+                MOCK_DATA.filter(
+                  (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
+                )
+              )
+            );
+          }
         }
       } catch {
-        setDamageLocations(ensureUiFields(MOCK_DATA));
+        // 예외 시에도 0만 표시
+        setDamageLocations(
+          ensureUiFields(
+            MOCK_DATA.filter(
+              (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
+            )
+          )
+        );
       } finally {
         setIsLoading(false);
       }
@@ -30,19 +52,21 @@ export default function AdminDamageContent() {
   }, []);
 
   const ensureUiFields = (list) =>
-    (list || []).map((loc) => ({
-      ...loc,
-      ai_result_text:
-        loc.ai_result_text ??
-        `임시 분석: "${loc.details || "정보 없음"}" — 위험도 평가 대기.`,
-      analyzed_photo_url:
-        loc.analyzed_photo_url ??
-        (USE_PLACEHOLDER_ANALYZED
-          ? `https://picsum.photos/seed/analyzed-${
-              loc.report_id || Math.random()
-            }/600/360`
-          : null),
-    }));
+    (list || []).map((loc) => {
+      const repairStatus = Number(loc.REPAIR_STATUS ?? loc.repair_status ?? 0);
+      return {
+        ...loc,
+        REPAIR_STATUS: repairStatus,
+        status_text: repairStatus === 0 ? "파손 - 수리대기중" : "수리완료",
+        // AI 분석 텍스트는 사용하지 않음
+        ai_result_text: "",
+        analyzed_photo_url:
+          loc.analyzed_photo_url ??
+          (USE_PLACEHOLDER_ANALYZED
+            ? `https://picsum.photos/seed/analyzed-${loc.report_id || Math.random()}/600/360`
+            : null),
+      };
+    });
 
   const fetchDamageLocations = async () => {
     try {
@@ -50,7 +74,11 @@ export default function AdminDamageContent() {
       const data = await res.json();
       if (res.ok && (Array.isArray(data.result) || Array.isArray(data))) {
         const rows = Array.isArray(data.result) ? data.result : data;
-        setDamageLocations(ensureUiFields(rows));
+        // REPAIR_STATUS === 0만 남김
+        const filtered = rows.filter(
+          (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
+        );
+        setDamageLocations(ensureUiFields(filtered));
         return true;
       }
       return false;
@@ -80,16 +108,21 @@ export default function AdminDamageContent() {
           ? `https://picsum.photos/seed/analyzed-${loc.report_id || Math.random()}/600/360`
           : null;
 
+        const repair_status = Number(loc.REPAIR_STATUS ?? loc.repair_status ?? 0);
+        const status_text =
+          loc.status_text ?? (repair_status === 0 ? "파손 - 수리대기중" : "수리완료");
+
         return {
-          lat: loc.latitude,
-          lng: loc.longitude,
+          lat: Number(loc.latitude),  // 숫자 변환
+          lng: Number(loc.longitude), // 숫자 변환
           address: loc.address || "주소 없음",
           details: loc.details || "내용 없음",
           date: loc.date || "",
           nickname: loc.nickname || "익명",
           photo_url: original,
-          ai_result_text: loc.ai_result_text || "",
           analyzed_photo_url: analyzed,
+          repair_status,
+          status_text,
         };
       })
     );
@@ -143,6 +176,12 @@ export default function AdminDamageContent() {
             text-align: center; line-height: 22px;
             cursor: pointer; font-size: 14px;
             box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          }
+          /* (선택) 상태 배지 스타일 */
+          #infoBox .status-badge {
+            display:inline-block; padding:2px 8px; border-radius:12px;
+            background:#ff9800; color:#fff; font-weight:700;
+            margin-left:6px;
           }
           .hr { height:1px; background:#eee; margin:10px 0; }
 
@@ -252,6 +291,8 @@ export default function AdminDamageContent() {
           function showInfoBox(location, marker) {
             var hasBoth = !!(location.photo_url && location.analyzed_photo_url);
             var rows = [
+              // 상태 + 배지
+              '<div class="info-row"><span class="label">상태:</span> <span class="status-badge">' + esc(location.status_text) + '</span></div>',
               '<div class="info-row"><span class="label">주소:</span> ' + esc(location.address) + '</div>',
               '<div class="info-row"><span class="label">세부 내용:</span> ' + esc(location.details) + '</div>',
               '<div class="info-row"><span class="label">날짜:</span> ' + esc(location.date) + '</div>',
@@ -282,11 +323,6 @@ export default function AdminDamageContent() {
               if (location.analyzed_photo_url) {
                 rows.push('<img class="basic" src="' + location.analyzed_photo_url + '" alt="분석 후 이미지" />');
               }
-            }
-
-            if (location.ai_result_text) {
-              rows.push('<div class="hr"></div>');
-              rows.push('<div class="info-row"><span class="label">AI 분석:</span> ' + esc(location.ai_result_text) + '</div>');
             }
 
             infoContent.innerHTML = rows.join('');
