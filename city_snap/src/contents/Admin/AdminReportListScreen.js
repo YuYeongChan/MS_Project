@@ -4,10 +4,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIn
 import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../utils/config';
 
-// --- 이미지 캐러셀(갤러리) 컴포넌트 ---
 const ImageCarousel = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
-    // 모달 너비(width: '90%')와 padding을 고려한 이미지 너비 계산
     const imageWidth = Dimensions.get('window').width * 0.9 - 40; 
 
     const handleScroll = (event) => {
@@ -146,8 +144,7 @@ export default function AdminReportListScreen() {
                                     {(() => {
                                         const images = [];
                                         if (selectedReport.photo_url) images.push({ uri: `${API_BASE_URL}/registration_photos/${selectedReport.photo_url}`, label: '원본' });
-                                        // TODO: analyzed_photo_url이 DB에 추가되면 아래 주석 해제
-                                        // if (selectedReport.analyzed_photo_url) images.push({ uri: `${API_BASE_URL}/analysis_photos/${selectedReport.analyzed_photo_url}`, label: 'AI 분석' });
+                                        
 
                                         if (images.length > 1) {
                                             return <ImageCarousel images={images} />;
@@ -210,7 +207,7 @@ export default function AdminReportListScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, paddingTop: 50, paddingHorizontal: 15, backgroundColor: '#f5f5f5', },
+    container: { flex: 1, padding: 20, paddingHorizontal: 15, backgroundColor: '#f5f5f5', },
     title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, },
     loadingIndicator: { flex: 1, justifyContent: 'center', alignItems: 'center', },
     card: { flexDirection: "row", backgroundColor: "#FFF", borderRadius: 12, padding: 12, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 3, },
