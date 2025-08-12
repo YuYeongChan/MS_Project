@@ -54,7 +54,7 @@ export default function AdminDamageContent() {
         details: loc.details,
         date: loc.date,
         nickname: loc.nickname,
-        photo_url: `${API_BASE_URL}${loc.photo_url}`,
+        photo_url: `${API_BASE_URL}/registration_photos/${loc.photo_url}`,
       }))
     );
 

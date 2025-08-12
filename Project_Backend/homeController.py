@@ -474,3 +474,18 @@ def delete_my_report(report_id: int, current_user: Dict = Depends(get_current_us
         return {"message": "삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+    
+# 특정 ID의 공지사항 상세 정보를 조회
+@app.get("/get_notice/{notice_id}")
+def get_notice_detail(notice_id: int):
+    return nDAO.getNoticeById(notice_id)
+
+@app.post("/update_notice/{notice_id}") 
+def update_notice(
+    notice_id: int,
+    title: str = Form(...),
+    content: str = Form(...),
+    notice_type: int = Form(...),
+    is_pinned: str = Form(...) # 'Y' or 'N'
+):
+    return nDAO.updateNotice(notice_id, title, content, notice_type, is_pinned)
