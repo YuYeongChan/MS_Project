@@ -10,8 +10,8 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  ActivityIndicator, // 로딩 인디케이터를 위해 추가
-  ScrollView, // 추가
+  ActivityIndicator,
+  ScrollView,
 } from "react-native";
 import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
 import ChooseDate from "./sub_contents/ChooseDate";
@@ -23,8 +23,11 @@ import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { getTokens } from "../auth/authStorage";
 import { apiFetch } from "../auth/api";
 import jwt_decode from 'jwt-decode';
+import Ionicons from "react-native-vector-icons/Ionicons"; // 아이콘 import
+import { useNavigation } from "@react-navigation/native";
 
 const PublicPropertyReportScreen = () => {
+  const navigation = useNavigation();
   const [photo, setPhoto] = useState(null);
   const [detail, setDetail] = useState("");
   const [visible, setVisible] = useState(false);
@@ -35,7 +38,7 @@ const PublicPropertyReportScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [recording, setRecording] = useState(null);
   const [voiceState, setVoiceState] = useState("idle");
-
+  
   useEffect(() => {
     if (!date) {
       const today = new Date();
@@ -61,8 +64,6 @@ const PublicPropertyReportScreen = () => {
       setPhoto(result.assets[0].uri);
     }
   };
-
-  // handleLocation 함수가 이제 주소 정보도 함께 받습니다.
 
   const handleLocation = (coords) => {
     setTempSelectedLocation(coords);
@@ -136,10 +137,13 @@ const PublicPropertyReportScreen = () => {
         );
         setPhoto(null);
         setDetail("");
+        setAudioUri(null);
         setDate(null);
         setLocation(null);
         setVisible(false);
         setModalType(null);
+
+        navigation.navigate("UserTabNavigator", { screen: "MainScreen" });
       } else {
         Alert.alert(
           "신고 실패",
@@ -207,13 +211,11 @@ const PublicPropertyReportScreen = () => {
       const result = response.data.result;
       console.log(" AI 구조화 결과:", result);
 
-      // 상세 내용 업데이트
       const combinedDetail = `${result["공공기물 종류"] || ""} - ${
         result["발견된 문제 또는 점검 필요 사유"] || ""
       }`;
       setDetail(combinedDetail);
 
-      // 주소가 존재하면 → 위도경도 변환 시도
       if (typeof result["장소"] === "string") {
         const geoRes = await fetch(
           `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
@@ -231,7 +233,6 @@ const PublicPropertyReportScreen = () => {
           });
           console.log(" 위치 변환 성공:", loc);
         } else {
-          // 변환 실패 시 lat/lng 0으로 설정
           setLocation({
             address: result["장소"],
             lat: 0,
@@ -251,9 +252,18 @@ const PublicPropertyReportScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* 뒤로가기 버튼 추가 */}
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+      >
+        <Ionicons name="arrow-back" size={30} color="#436D9D" />
+      </TouchableOpacity>
+      
       <Text style={styles.title}>공공기물 파손 등록</Text>
+      
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={styles.scrollViewContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -270,6 +280,7 @@ const PublicPropertyReportScreen = () => {
           />
           <Text style={styles.recordText}>AI 음성 등록 서비스</Text>
         </TouchableOpacity>
+        
         <Text style={styles.subtitle}>사진 등록</Text>
         <TouchableOpacity style={styles.photoBox} onPress={pickPhoto}>
           {photo ? (
@@ -278,6 +289,7 @@ const PublicPropertyReportScreen = () => {
             <Text style={styles.plusIcon}>＋</Text>
           )}
         </TouchableOpacity>
+        
         <TouchableOpacity
           style={styles.chooseButton}
           onPress={() => {
@@ -294,6 +306,7 @@ const PublicPropertyReportScreen = () => {
                 : "공공기물 위치 선택")}
           </Text>
         </TouchableOpacity>
+        
         <TouchableOpacity
           style={styles.chooseButton}
           onPress={() => {
@@ -303,6 +316,7 @@ const PublicPropertyReportScreen = () => {
         >
           <Text style={styles.submitText}>{date || "날짜 선택"}</Text>
         </TouchableOpacity>
+        
         <View style={styles.viewStyle}>
           <Text style={styles.viewTitle}>상세 내용</Text>
           <TextInput
@@ -313,6 +327,7 @@ const PublicPropertyReportScreen = () => {
             multiline
           />
         </View>
+        
         <TouchableOpacity
           style={styles.submitButton}
           onPress={handleSubmitReport}
@@ -324,7 +339,7 @@ const PublicPropertyReportScreen = () => {
             <Text style={styles.submitText}>등록하기</Text>
           )}
         </TouchableOpacity>
-
+        
         <Modal
           visible={visible}
           transparent
@@ -373,7 +388,6 @@ const PublicPropertyReportScreen = () => {
                     </Text>
                   )}
 
-                  {/* 대기 상태 */}
                   {voiceState === "idle" && (
                     <>
                       <TouchableOpacity
@@ -392,7 +406,6 @@ const PublicPropertyReportScreen = () => {
                     </>
                   )}
 
-                  {/* 녹음 중 */}
                   {voiceState === "recording" && (
                     <>
                       <TouchableOpacity
@@ -411,7 +424,6 @@ const PublicPropertyReportScreen = () => {
                     </>
                   )}
 
-                  {/* AI 처리 중 */}
                   {voiceState === "processing" && (
                     <>
                       <Text style={styles.voiceDescription}>

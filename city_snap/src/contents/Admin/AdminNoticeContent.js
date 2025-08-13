@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Ale
 import { Ionicons } from "@expo/vector-icons";
 import { styles } from "../../style/NoticeBoardStyle";
 import { API_BASE_URL } from "../../utils/config";
-import AdminNoticeWrite from "./AdminNoticeWrite"; // 새로 만든 작성 컴포넌트 import
+import AdminNoticeWrite from "./AdminNoticeWrite"; 
 
 export default function AdminNoticeContent() {
   const [notices, setNotices] = useState([]);
@@ -11,7 +11,11 @@ export default function AdminNoticeContent() {
   const [visible, setVisible] = useState(false);
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isWriting, setIsWriting] = useState(false); // 글쓰기 모드 상태 추가
+  
+  // '글쓰기' 또는 '수정하기' 모드를 관리하는 상태
+  const [isWriteMode, setIsWriteMode] = useState(false); 
+  // 수정할 공지 데이터를 임시 저장할 상태
+  const [editingNotice, setEditingNotice] = useState(null); 
 
   const PAGE_SIZE = 4;
 
@@ -35,6 +39,7 @@ export default function AdminNoticeContent() {
     fetchNotices();
   }, [fetchNotices]);
 
+  // 공지사항 삭제 처리 함수
   const handleDelete = (id) => {
     Alert.alert("공지사항 삭제", "정말로 이 공지사항을 삭제하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -61,15 +66,22 @@ export default function AdminNoticeContent() {
     ]);
   };
 
-  // 글쓰기 완료 후 처리 함수
+  // 글쓰기 또는 수정이 완료되었을 때 호출되는 함수
   const handleSubmission = () => {
-    setIsWriting(false); // 목록 화면으로 전환
-    fetchNotices(); // 목록 새로고침
+    setIsWriteMode(false); // 작성/수정 화면 닫기
+    setEditingNotice(null); // 수정 데이터 초기화
+    fetchNotices();       // 최신 목록으로 새로고침
   };
   
-  // 글쓰기 모드일 경우 작성 화면을 렌더링
-  if (isWriting) {
-    return <AdminNoticeWrite onCancel={() => setIsWriting(false)} onSubmited={handleSubmission} />;
+  // 'isWriteMode'가 true이면, '글쓰기' 또는 '수정' 화면을 렌더링
+  if (isWriteMode) {
+    return (
+      <AdminNoticeWrite 
+        initialData={editingNotice} // '수정' 시 기존 데이터를 전달, '글쓰기' 시 null 전달
+        onCancel={() => { setIsWriteMode(false); setEditingNotice(null); }} 
+        onSubmited={handleSubmission} 
+      />
+    );
   }
 
   const fixedNotices = notices.filter(n => n.fixed);
@@ -77,15 +89,20 @@ export default function AdminNoticeContent() {
   const totalPages = Math.ceil(normalNotices.length / PAGE_SIZE);
   const pagedNotices = normalNotices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // 공지사항 목록 아이템 렌더링 함수
   const renderNoticeItem = (item) => {
     const icon = item.type === 0 ? "warning" : item.type === 1 ? "information-circle" : "checkmark-circle";
     const iconColor = item.type === 0 ? "#c91515" : item.type === 1 ? "#436D9D" : "#008000";
     return (
-      <TouchableOpacity key={item.id} style={styles.noticeBox} onPress={() => { setSelectedNotice(item); setVisible(true); }}>
-        <Ionicons name={icon} size={24} color={iconColor} />
-        <View style={styles.noticeContentWrapper}>
+      <TouchableOpacity 
+        key={item.id} 
+        style={styles.noticeBox} 
+        onPress={() => { setSelectedNotice(item); setVisible(true); }}
+      >
+        <Ionicons name={icon} size={24} color={iconColor} style={{ marginRight: 10 }} />
+        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={styles.noticeTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.noticeDate}>{item.date}</Text>
+          <Text style={styles.noticeDate}>{item.notice_date}</Text> 
         </View>
       </TouchableOpacity>
     );
@@ -95,7 +112,7 @@ export default function AdminNoticeContent() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.headerContainer}>
         <Text style={styles.title}>관리자 공지사항</Text>
-        <TouchableOpacity style={styles.writeButton} onPress={() => setIsWriting(true)}>
+        <TouchableOpacity style={styles.writeButton} onPress={() => setIsWriteMode(true)}>
             <Text style={styles.writeButtonText}>글 쓰기</Text>
         </TouchableOpacity>
       </View>
@@ -109,19 +126,11 @@ export default function AdminNoticeContent() {
 
           {totalPages > 1 && (
             <View style={styles.pageButtonArea}>
-              <TouchableOpacity
-                style={styles.pageButton}
-                disabled={page === 1}
-                onPress={() => setPage(page - 1)}
-              >
+              <TouchableOpacity style={styles.pageButton} disabled={page === 1} onPress={() => setPage(page - 1)}>
                 <Text style={page === 1 ? styles.disabledText : styles.pageButtonText}>이전</Text>
               </TouchableOpacity>
               <Text style={styles.pageButtonText}>{page} / {totalPages}</Text>
-              <TouchableOpacity
-                style={styles.pageButton}
-                disabled={page === totalPages}
-                onPress={() => setPage(page + 1)}
-              >
+              <TouchableOpacity style={styles.pageButton} disabled={page === totalPages} onPress={() => setPage(page + 1)}>
                 <Text style={page === totalPages ? styles.disabledText : styles.pageButtonText}>다음</Text>
               </TouchableOpacity>
             </View>
@@ -142,7 +151,14 @@ export default function AdminNoticeContent() {
               </ScrollView>
 
               <View style={styles.buttonRow}>
-                <TouchableOpacity style={styles.modalButton} onPress={() => console.log("수정 버튼 눌림")}>
+                <TouchableOpacity 
+                  style={styles.modalButton} 
+                  onPress={() => {
+                    setEditingNotice(selectedNotice); // 수정할 데이터 저장
+                    setVisible(false);                // 상세 모달 닫기
+                    setIsWriteMode(true);             // 글쓰기/수정 화면 열기
+                  }}
+                >
                   <Text style={styles.modalButtonText}>수정</Text>
                 </TouchableOpacity>
                 <TouchableOpacity

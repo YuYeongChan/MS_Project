@@ -30,6 +30,13 @@ except Exception as e:
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# ADMIN이 유저 랭킹에서 개인정보 볼려면 필요한거
+DB_SCHEMA = os.environ.get("DB_SCHEMA", "").strip()
+
+def qname(name: str) -> str:
+    return f'{DB_SCHEMA+"." if DB_SCHEMA else ""}{name}'
+
+
 class AccountDAO:
     def __init__(self):
         self.profilePhotoFolder = "./profile_photos/"
@@ -374,6 +381,85 @@ class AccountDAO:
             if con:
                 con.rollback()
             return False
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    #admim이 유저 개인정보 조회
+    def getUserDetailsById(self, user_id: str) -> dict:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = f"""
+                SELECT
+                    u.USER_ID,
+                    u.NICKNAME,
+                    u.PHONE_NUMBER,
+                    u.ADDRESS,
+                    u.SCORE,
+                    u.PROFILE_PIC_URL,
+                    u.IS_ADMIN,
+                    (SELECT COUNT(*)
+                    FROM {qname('REPORTS')} r
+                    WHERE r.USER_ID = u.USER_ID) AS REPORTS_COUNT
+                FROM {qname('USERS')} u
+                WHERE u.USER_ID = :user_id
+            """
+            cur.execute(sql, {"user_id": user_id})
+            row = cur.fetchone()
+            if not row:
+                return {}
+            return {
+                "user_id": row[0],
+                "nickname": row[1],
+                "phone_number": row[2],
+                "address": row[3],
+                "score": row[4],
+                "profile_pic_url": row[5],
+                "is_admin": row[6],
+                "reports_count": row[7],
+            }
+        except Exception as e:
+            print(f"[getUserDetailsById] SQL 오류: {e}")
+            return {}
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    # 이메일로 조회 + 신고횟수 포함  (이전 함수 개선)
+    def getUserByEmail(self, email: str) -> dict:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = f"""
+                SELECT
+                    u.USER_NO,         -- PK
+                    u.USER_ID,
+                    u.NICKNAME,
+                    u.PHONE_NUMBER,
+                    u.ADDRESS,
+                    (SELECT COUNT(*)
+                    FROM {qname('REPORTS')} r
+                    WHERE r.USER_ID = u.USER_ID) AS REPORTS_COUNT
+                FROM {qname('USERS')} u
+                WHERE u.USER_ID = :email
+                AND ROWNUM = 1
+            """
+            cur.execute(sql, {"email": email})
+            row = cur.fetchone()
+            if not row:
+                return {}
+            return {
+                "user_pk": row[0],
+                "user_id": row[1],
+                "nickname": row[2],
+                "phone_number": row[3],
+                "address": row[4],
+                "reports_count": row[5],
+            }
+        except Exception as e:
+            print(f"[getUserByEmail] SQL 오류: {e}")
+            return {}
         finally:
             if cur:
                 SsyDBManager.closeConCur(con, cur)

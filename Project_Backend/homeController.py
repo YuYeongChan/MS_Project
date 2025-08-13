@@ -15,6 +15,7 @@ import jwt
 # 개인정보 수정
 from fastapi import Depends, Header
 from pydantic import BaseModel
+from urllib.parse import unquote # ADMIN 랭킹 개인정보 확인
 from token_utils import create_access_token, create_refresh_token, REFRESH_SECRET_KEY, SECRET_KEY, ALGORITHM
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
@@ -185,7 +186,8 @@ async def registrationWrite(
     longitude: float = Form(...),
     user_id: str = Form(...),
     details: str = Form(...),
-    report_date: str = Form(...)
+    report_date: str = Form(...),
+    is_normal: int = Form(0)  # ← 0/1 로 받기
 ):
     return await rDAO.registerFacility(photo, location_description, latitude, longitude, user_id, details, report_date)
 
@@ -470,6 +472,58 @@ def delete_my_report(report_id: int, current_user: Dict = Depends(get_current_us
         return {"message": "삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+    
+# 특정 ID의 공지사항 상세 정보를 조회
+@app.get("/get_notice/{notice_id}")
+def get_notice_detail(notice_id: int):
+    return nDAO.getNoticeById(notice_id)
+
+@app.post("/update_notice/{notice_id}") 
+def update_notice(
+    notice_id: int,
+    title: str = Form(...),
+    content: str = Form(...),
+    notice_type: int = Form(...),
+    is_pinned: str = Form(...) # 'Y' or 'N'
+):
+    return nDAO.updateNotice(notice_id, title, content, notice_type, is_pinned)
+
+@app.get("/admin/all_reports")
+def get_all_reports_for_admin():
+    """관리자 페이지를 위한 모든 신고 목록을 조회합니다."""
+    return rDAO.getAllReportsForAdmin()
+
+@app.get("/report_details/{report_id}")
+def get_report_details(report_id: int):
+    """특정 신고의 모든 상세 정보를 조회합니다."""
+    return rDAO.getReportDetailsById(report_id)
+
+@app.post("/update_report_status/{report_id}")
+def update_report_status(
+    report_id: int,
+    is_normal: int = Form(...), # 0=파손, 1=정상
+    repair_status: int = Form(...)  # 0=수리 대기, 1=수리 완료
+):
+    """신고의 파손 및 수리 상태를 업데이트합니다."""
+    return rDAO.updateReportStatuses(report_id, is_normal, repair_status)
+
+# 1) 이메일 쿼리 파라미터 방식
+@app.get("/admin/users/by-email")
+def admin_get_user_by_email(email: str):
+    user = aDAO.getUserByEmail(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="유저가 없습니다.")
+    return {"result": user}
+
+# 2) path param 방식도 필요하면 제공 (URL 인코딩 주의)
+@app.get("/admin/users/{user_id}")
+def admin_get_user_by_id(user_id: str):
+    # 안전: 브라우저가 인코딩한 %40 등을 복원
+    uid = unquote(user_id)
+    user = aDAO.getUserDetailsById(uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="유저가 없습니다.")
+    return {"result": user}
     
 class RefreshIn(BaseModel):
     refreshToken: str

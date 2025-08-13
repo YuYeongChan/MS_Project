@@ -16,7 +16,6 @@ import SignUpScreen from "./src/contents/SignUpScreen";
 import MyInfoScreen from "./src/contents/MyInfoScreen";
 import DamageMapScreen from './src/contents/DamageMapScreen';
 import RankingScreen from './src/contents/RankingScreen';
-import SettingsScreen from './src/contents/SettingsScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
@@ -88,7 +87,6 @@ function UserTabNavigator() {
         <Tab.Screen name="NoticeBoardScreen" component={NoticeBoardScreen} options={{ title: '공지 사항' }} />
         <Tab.Screen name="RankingScreen" component={RankingScreen} options={{ title: '순위표' }} />
         <Tab.Screen name="MyInfoScreen" component={MyInfoScreen} options={{ title: '내 정보' }} />
-        <Tab.Screen name="SettingsScreen" component={SettingsScreen} options={{ title: '설정' }} />
       </Tab.Navigator>
     </>
   );
@@ -120,7 +118,7 @@ function UserAppStack() {
 // 관리자 앱 스택
 function AdminAppStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName="AdminMainScreen">
       <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
       <Stack.Screen name="AdminLayout" component={AdminLayout} />
     </Stack.Navigator>

@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        color: "#436D9D",
+        color: "#2c3e50",
         fontFamily: 'PretendardGOV-Bold',
         marginBottom: 10,
     },
@@ -190,7 +190,7 @@ export const styles = StyleSheet.create({
         alignItems: 'center',
         flex: 1, // 버튼이 공간을 차지하도록
     },
-        writeButton: {
+    writeButton: {
         backgroundColor: '#436D9D',
         paddingHorizontal: 15,
         paddingVertical: 8,
@@ -201,11 +201,44 @@ export const styles = StyleSheet.create({
         fontFamily: 'PretendardGOV-Bold',
         fontSize: 14,
     },
-        headerContainer: {
+    headerContainer: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginBottom: 10,
     },
-    // 
+    noticeTypeSelector: {
+        marginTop: 20,
+        width: '100%',
+    },
+    selectorLabel: {
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: '#333',
+        marginBottom: 10,
+    },
+    typeButtonContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+    },
+    typeButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#ccc',
+    },
+    typeButtonActive: {
+        backgroundColor: '#436D9D',
+        borderColor: '#436D9D',
+    },
+    typeButtonText: {
+        fontSize: 14,
+        color: '#555',
+    },
+    typeButtonTextActive: {
+        color: '#fff',
+        fontWeight: 'bold',
+    },
+    
 });

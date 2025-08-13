@@ -91,3 +91,52 @@ class NoticeDAO:
             if cur and con:
                 SsyDBManager.closeConCur(con, cur)
 
+    def getNoticeById(self, id):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = "SELECT * FROM notices WHERE notice_id = :1"
+            cur.execute(sql, [id])
+            notice_data = cur.fetchone()
+
+            if notice_data:
+                notice_id, title, content, created_date, created_by, notice_type, is_pinned = notice_data
+                notice_dict = {
+                    "id": notice_id, "title": title, "content": content.read(),
+                    "date": created_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "notice_date": created_date.strftime("%Y-%m-%d"),
+                    "admin_name": created_by, "type": notice_type,
+                    "fixed": True if is_pinned == "Y" else False
+                }
+                return JSONResponse(notice_dict, status_code=200, headers=h)
+            else:
+                return JSONResponse({"error": "Notice not found"}, status_code=404, headers=h)
+        except Exception as e:
+            print(f"특정 공지 조회 중 오류 발생: {e}")
+            return JSONResponse({"result": f"DB 오류: {e}"}, status_code=500, headers=h)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    def updateNotice(self, id, title, content, notice_type, is_pinned):
+        h = {"Access-Control-Allow-Origin": "*"}
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql = """
+                UPDATE notices 
+                SET title = :1, content = :2, notice_type = :3, is_pinned = :4
+                WHERE notice_id = :5
+            """
+            cur.execute(sql, [title, content, notice_type, is_pinned, id])
+            con.commit()
+
+            if cur.rowcount > 0:
+                return JSONResponse({'result': 'success'}, headers=h)
+            else:
+                return JSONResponse({'error': 'Update failed or notice not found'}, status_code=404, headers=h)
+        except Exception as e:
+            print(f"공지사항 수정 중 오류 발생: {e}")
+            return JSONResponse({'error': str(e)}, status_code=500, headers=h)
+        finally:
+            if cur and con: SsyDBManager.closeConCur(con, cur)

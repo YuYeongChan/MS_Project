@@ -2,32 +2,32 @@ import React, { useEffect } from 'react';
 import { BackHandler } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import TopBar from '../TopBar';
+import AdminTopBar from '../AdminTopBar';
 import { Ionicons } from '@expo/vector-icons';
 
 import AdminDamageContent from './AdminDamageContent';
 import AdminNoticeContent from './AdminNoticeContent';
 import AdminRankingContent from './AdminRankingContent';
+import AdminReportListScreen from './AdminReportListScreen'; 
 
 const Tab = createBottomTabNavigator();
 
 export default function AdminLayout({ route }) {
   const navigation = useNavigation();
-  const initialRoute = route?.params?.initialRoute ?? 'Damage';
 
-  // ✅ 안드로이드 뒤로가기 버튼 핸들링
+  const initialRoute = route?.params?.initialRoute ?? 'ReportList';
+
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      navigation.goBack(); // AdminMainScreen으로 돌아감
-      return true; // 기본 뒤로가기 동작 막기
+      navigation.goBack();
+      return true;
     });
-
-    return () => backHandler.remove(); // 컴포넌트 언마운트 시 제거
+    return () => backHandler.remove();
   }, []);
 
   return (
     <>
-      <TopBar />
+      <AdminTopBar />
       <Tab.Navigator
         initialRouteName={initialRoute}
         screenOptions={{
@@ -38,6 +38,16 @@ export default function AdminLayout({ route }) {
           },
         }}
       >
+        <Tab.Screen
+          name="ReportList"
+          component={AdminReportListScreen}
+          options={{
+            tabBarLabel: "전체 신고",
+            tabBarIcon: ({ color, size }) => (
+              <Ionicons name="file-tray-full" color={color} size={size} />
+            ),
+          }}
+        />
         <Tab.Screen
           name="Damage"
           component={AdminDamageContent}
