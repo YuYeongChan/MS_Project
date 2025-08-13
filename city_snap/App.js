@@ -12,7 +12,6 @@ import MyDamageListScreen from './src/contents/MyDamageListScreen';
 import RankingScreen from './src/contents/RankingScreen';
 import SettingsScreen from './src/contents/SettingsScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
-import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useCallback } from 'react';
@@ -114,10 +113,8 @@ export default function App() {
           <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
           <Stack.Screen name="UserTabNavigator" component={UserTabNavigator} />
           <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} />
-          <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
-          <Stack.Screen name="AdminLayout" component={AdminLayout} />
+          <Stack.Screen name="AdminMainScreen" component={AdminLayout} />
           <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
-
           <Stack.Screen name="EditUserInfoScreen" component={EditUserInfoScreen} />
           <Stack.Screen name="MyReportsScreen" component={MyReportsScreen} />
         </Stack.Navigator>
