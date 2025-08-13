@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
 import { API_BASE_URL, googleMapsApiKey } from "../../utils/config";
+import { appEvents, EVENTS } from "../../utils/eventBus";
 
 const USE_MOCK_ONLY = false;
 const USE_PLACEHOLDER_ANALYZED = true;
@@ -12,43 +13,43 @@ export default function AdminDamageContent() {
   const [userCenter] = useState({ lat: 37.5665, lng: 126.978 });
 
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
       try {
         if (USE_MOCK_ONLY) {
-          // MOCK 사용 시에도 setState 실행
+          if (!isMounted) return;
           setDamageLocations(
             ensureUiFields(
-              MOCK_DATA.filter(
-                (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
-              )
+              MOCK_DATA.filter((loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0")
             )
           );
         } else {
           const ok = await fetchDamageLocations();
-          if (!ok) {
+          if (!ok && isMounted) {
             setDamageLocations(
               ensureUiFields(
-                MOCK_DATA.filter(
-                  (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
-                )
+                MOCK_DATA.filter((loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0")
               )
             );
           }
         }
-      } catch {
-        // 예외 시에도 0만 표시
-        setDamageLocations(
-          ensureUiFields(
-            MOCK_DATA.filter(
-              (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
-            )
-          )
-        );
       } finally {
-        setIsLoading(false);
+        if (isMounted) setIsLoading(false);
       }
     };
+
     init();
+
+    const onReportStatusUpdated = () => {
+      fetchDamageLocations();
+    };
+    appEvents.on(EVENTS.REPORT_STATUS_UPDATED, onReportStatusUpdated);
+
+    return () => {
+      isMounted = false;
+      appEvents.off(EVENTS.REPORT_STATUS_UPDATED, onReportStatusUpdated);
+    };
   }, []);
 
   const ensureUiFields = (list) =>
@@ -58,7 +59,6 @@ export default function AdminDamageContent() {
         ...loc,
         REPAIR_STATUS: repairStatus,
         status_text: repairStatus === 0 ? "파손 - 수리대기중" : "수리완료",
-        // AI 분석 텍스트는 사용하지 않음
         ai_result_text: "",
         analyzed_photo_url:
           loc.analyzed_photo_url ??
@@ -70,11 +70,12 @@ export default function AdminDamageContent() {
 
   const fetchDamageLocations = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/get_all_damage_reports`);
+      const res = await fetch(`${API_BASE_URL}/get_all_damage_reports`, {
+        headers: { "Cache-Control": "no-cache" },
+      });
       const data = await res.json();
       if (res.ok && (Array.isArray(data.result) || Array.isArray(data))) {
         const rows = Array.isArray(data.result) ? data.result : data;
-        // REPAIR_STATUS === 0만 남김
         const filtered = rows.filter(
           (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
         );
@@ -91,19 +92,13 @@ export default function AdminDamageContent() {
     const locationsArrayString = JSON.stringify(
       (locations || []).map((loc) => {
         const original = loc.photo_url
-          ? `${API_BASE_URL}/registration_photos/${String(loc.photo_url).replace(
-              /^\//,
-              ""
-            )}`
+          ? `${API_BASE_URL}/registration_photos/${String(loc.photo_url).replace(/^\//, "")}`
           : `https://picsum.photos/seed/${loc.report_id || Math.random()}/600/360`;
 
         const analyzed = loc.analyzed_photo_url
           ? String(loc.analyzed_photo_url).startsWith("http")
             ? loc.analyzed_photo_url
-            : `${API_BASE_URL}/analysis_photos/${String(loc.analyzed_photo_url).replace(
-                /^\//,
-                ""
-              )}`
+            : `${API_BASE_URL}/analysis_photos/${String(loc.analyzed_photo_url).replace(/^\//, "")}`
           : USE_PLACEHOLDER_ANALYZED
           ? `https://picsum.photos/seed/analyzed-${loc.report_id || Math.random()}/600/360`
           : null;
@@ -113,8 +108,8 @@ export default function AdminDamageContent() {
           loc.status_text ?? (repair_status === 0 ? "파손 - 수리대기중" : "수리완료");
 
         return {
-          lat: Number(loc.latitude),  // 숫자 변환
-          lng: Number(loc.longitude), // 숫자 변환
+          lat: Number(loc.latitude),
+          lng: Number(loc.longitude),
           address: loc.address || "주소 없음",
           details: loc.details || "내용 없음",
           date: loc.date || "",
@@ -139,57 +134,93 @@ export default function AdminDamageContent() {
         <title>파손 현황 지도</title>
         <style>
           html, body, #map {height:100%; width:100%; margin:0; padding:0;}
-          #map { position: relative; }
-          #infoBox {
+          body { position: relative; }
+
+          /* InfoBox + 바깥 닫기 버튼 묶는 래퍼 */
+          #infoWrap {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
+            width: 80%;
+            z-index: 9999;
+            pointer-events: none; /* 래퍼는 통과 */
+          }
+
+          /* 바깥 X 버튼: infoBox 오른쪽 위 모서리를 살짝 넘겨서 배치 */
+          #outerCloseBtn {
+            position: absolute;
+            right: -30px;
+            top: -40px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(244,67,54,0.95);
+            color: #fff;
+            border: none;
+            font-size: 20px;
+            line-height: 32px;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            cursor: pointer;
+            display: none;     /* InfoBox 열릴 때만 표시 */
+            pointer-events: auto; /* 버튼은 클릭 가능 */
+          }
+
+          /* InfoBox 본체 */
+          #infoBox {
+            position: relative;
             background: white;
             border-radius: 12px;
-            padding: 40px 16px 16px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
-            max-width: 340px;
+            padding-top: 15px;
+            padding-right: 15px;
+            padding-left: 15px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
+            width: 100%;
             max-height: 70vh;
             overflow: auto;
-            font-size: 14px;
+            font-size: 16px;
             display: none;
-            z-index: 9999;
-            font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+            font-family: 'PretendardGOV-Regular', -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.5;
+            pointer-events: auto; /* 내부는 클릭 가능 */
           }
-          #infoBox .info-row { margin-bottom: 8px; color:#333; }
-          #infoBox .label { font-weight: 700; color: #436D9D; }
-          #infoBox img.basic {
-            width: 100%;
-            border-radius: 8px;
-            margin-top: 10px;
-            object-fit: cover;
-            max-height: 220px;
+
+          #infoBox .info-row { display: flex; align-items: flex-start; margin-bottom: 6px; }
+          #infoBox .label { width: 70px; font-weight: bold; color: #436D9D; flex-shrink: 0; }
+          #infoBox .value { flex: 1; color: #333; }
+          #infoBox span.addr-title {
+            font-weight: bold; font-size: 18px; margin-bottom: 8px; padding-bottom: 5px;
+            display: inline-block; border-bottom: 2px solid #436d9de7; width: 100%;
           }
-          #infoBox .closeBtn {
-            position: absolute;
-            top: 8px; right: 8px;
-            background: #f44336; color: #fff;
-            border: none; border-radius: 50%;
-            width: 24px; height: 24px;
-            text-align: center; line-height: 22px;
-            cursor: pointer; font-size: 14px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          }
-          /* (선택) 상태 배지 스타일 */
-          #infoBox .status-badge {
-            display:inline-block; padding:2px 8px; border-radius:12px;
-            background:#ff9800; color:#fff; font-weight:700;
-            margin-left:6px;
+          #infoBox .description {
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+            overflow: hidden; text-overflow: ellipsis; line-height: 1.5;
+            max-height: calc(1.5em * 2); white-space: pre-line;
           }
           .hr { height:1px; background:#eee; margin:10px 0; }
 
-          /* === 슬라이드 갤러리 === */
+          /*  16:9 고정 프레임 (단일 이미지) */
+          .image-frame {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #00000010;
+            margin-top: 10px;
+          }
+          .image-frame img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover; /* 16:9 내부 꽉 채움 */
+            display: block;
+          }
+
+          /*  16:9 고정 캐러셀 */
           .carousel {
             position: relative;
             width: 100%;
-            height: 220px;
+            aspect-ratio: 16 / 9;  /* 고정 */
             overflow: hidden;
             border-radius: 8px;
             background: #00000010;
@@ -199,66 +230,46 @@ export default function AdminDamageContent() {
           .carousel .slides {
             display: flex;
             height: 100%;
-            width: 200%; /* 2장 기준 */
-            transform: translateX(0%);
+            transform: translateX(0);
             transition: transform 260ms ease;
           }
-          .carousel .slide {
-            flex: 0 0 100%;
-            height: 100%;
-          }
+          .carousel .slide { flex: 0 0 100%; height: 100%; }
           .carousel .slide img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: cover; /* 16:9 내부 꽉 채움 */
             display: block;
           }
           .carousel .arrow {
-            position: absolute;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 32px; height: 32px;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.45);
-            color: #fff;
-            border: none;
-            cursor: pointer;
+            position: absolute; top: 50%; transform: translateY(-50%);
+            width: 32px; height: 32px; border-radius: 50%;
+            background: rgba(0,0,0,0.45); color: #fff; border: none; cursor: pointer;
           }
           .carousel .arrow.left { left: 8px; }
           .carousel .arrow.right { right: 8px; }
-          .carousel .dots {
-            position: absolute;
-            bottom: 6px; left: 0; right: 0;
-            display: flex; justify-content: center; gap: 6px;
-          }
-          .carousel .dot {
-            width: 8px; height: 8px; border-radius: 50%;
-            background: #ffffff88;
-          }
+          .carousel .dots { position: absolute; bottom: 6px; left: 0; right: 0; display: flex; justify-content: center; gap: 6px; }
+          .carousel .dot { width: 8px; height: 8px; border-radius: 50%; background: #ffffff88; }
           .carousel .dot.active { background: #ffffff; }
-          .badgewrap {
-            position: absolute; top: 8px; left: 8px; right: 8px;
-            display: flex; justify-content: space-between; pointer-events: none;
-          }
-          .badge {
-            font-size: 12px; font-weight: 700;
-            background: rgba(0,0,0,0.55); color: #fff;
-            padding: 4px 8px; border-radius: 6px;
-          }
+          .badgewrap { position: absolute; top: 8px; left: 8px; right: 8px; display: flex; justify-content: space-between; pointer-events: none; }
+          .badge { font-size: 12px; font-weight: 700; background: rgba(0,0,0,0.55); color: #fff; padding: 4px 8px; border-radius: 6px; }
         </style>
         <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
       </head>
       <body>
         <div id="map"></div>
-        <div id="infoBox">
-          <button class="closeBtn" onclick="hideInfoBox()">×</button>
-          <div id="infoContent"></div>
+
+        <!-- InfoBox + 바깥 X 버튼 -->
+        <div id="infoWrap">
+          <button id="outerCloseBtn" aria-label="닫기">&times;</button>
+          <div id="infoBox">
+            <div id="infoContent"></div>
+          </div>
         </div>
+
         <script>
-          var map;
-          var markers = [];
+          var map, markers = [];
           var damageLocations = ${locationsArrayString};
-          var infoBox, infoContent;
+          var infoBox, infoContent, outerCloseBtn, infoWrap;
 
           function initMap() {
             map = new google.maps.Map(document.getElementById('map'), {
@@ -267,8 +278,11 @@ export default function AdminDamageContent() {
               disableDefaultUI: false
             });
 
+            infoWrap = document.getElementById('infoWrap');
             infoBox = document.getElementById('infoBox');
             infoContent = document.getElementById('infoContent');
+            outerCloseBtn = document.getElementById('outerCloseBtn');
+            if (outerCloseBtn) outerCloseBtn.addEventListener('click', hideInfoBox);
 
             damageLocations.forEach(function(location) {
               if (!location.lat || !location.lng) return;
@@ -291,12 +305,11 @@ export default function AdminDamageContent() {
           function showInfoBox(location, marker) {
             var hasBoth = !!(location.photo_url && location.analyzed_photo_url);
             var rows = [
-              // 상태 + 배지
-              '<div class="info-row"><span class="label">상태:</span> <span class="status-badge">' + esc(location.status_text) + '</span></div>',
-              '<div class="info-row"><span class="label">주소:</span> ' + esc(location.address) + '</div>',
-              '<div class="info-row"><span class="label">세부 내용:</span> ' + esc(location.details) + '</div>',
-              '<div class="info-row"><span class="label">날짜:</span> ' + esc(location.date) + '</div>',
-              '<div class="info-row"><span class="label">작성자:</span> ' + esc(location.nickname) + '</div>'
+              '<span class="addr-title">' + esc(location.address) + '</span>',
+              '<div class="info-row"><span class="label">날짜</span> <span class="value">' + esc(location.date) + '</span></div>',
+              '<div class="info-row"><span class="label">작성자</span> <span class="value">' + esc(location.nickname) + '</span></div>',
+              '<div class="info-row"><span class="label">상태</span> <span class="value">' + esc(location.status_text) + '</span></div>',
+              '<div class="info-row"><span class="label">내용</span> <span class="value description">' + esc(location.details) + '</span></div>'
             ];
 
             if (hasBoth) {
@@ -318,21 +331,25 @@ export default function AdminDamageContent() {
               );
             } else {
               if (location.photo_url) {
-                rows.push('<img class="basic" src="' + location.photo_url + '" alt="원본 이미지" />');
+                rows.push('<div class="image-frame"><img src="'+location.photo_url+'" alt="원본" /></div>');
               }
               if (location.analyzed_photo_url) {
-                rows.push('<img class="basic" src="' + location.analyzed_photo_url + '" alt="분석 후 이미지" />');
+                rows.push('<div class="image-frame"><img src="'+location.analyzed_photo_url+'" alt="분석 후" /></div>');
               }
             }
 
             infoContent.innerHTML = rows.join('');
             infoBox.style.display = "block";
+            outerCloseBtn.style.display = "block";   // InfoBox 열릴 때 버튼 표시
             map.panTo(marker.getPosition());
 
             if (hasBoth) initCarousel();
           }
 
-          function hideInfoBox() { infoBox.style.display = "none"; }
+          function hideInfoBox() {
+            infoBox.style.display = "none";
+            outerCloseBtn.style.display = "none";    // 닫으면 버튼 숨김
+          }
 
           function initCarousel() {
             document.querySelectorAll('.carousel').forEach(function(root){
@@ -341,58 +358,30 @@ export default function AdminDamageContent() {
               var leftBtn = root.querySelector('.arrow.left');
               var rightBtn = root.querySelector('.arrow.right');
               var index = 0;
+              var total = root.querySelectorAll('.slide').length;
               var startX = 0, currentX = 0, dragging = false, moved = false;
 
               function apply() {
                 slidesWrap.style.transition = 'transform 260ms ease';
-                slidesWrap.style.transform = 'translateX(' + (-index * 100) + '%)';
+                var offset = -index * root.clientWidth;
+                slidesWrap.style.transform = 'translateX(' + offset + 'px)';
                 dots.forEach(function(d, i){ d.classList.toggle('active', i === index); });
               }
+              function jumpTo(idx) { index = Math.max(0, Math.min(total - 1, idx)); apply(); }
+              function onPointerDown(x){ dragging = true; moved = false; startX = x; currentX = x; slidesWrap.style.transition = 'none'; }
+              function onPointerMove(x){ if(!dragging) return; var dx = x - startX; currentX = x; var base = -index * root.clientWidth; slidesWrap.style.transform = 'translateX(' + (base + dx) + 'px)'; moved = true; }
+              function onPointerUp(){ if(!dragging) return; var dx = currentX - startX; dragging = false; if (dx > 50) jumpTo(index - 1); else if (dx < -50) jumpTo(index + 1); else apply(); }
 
-              function jumpTo(idx) {
-                index = Math.max(0, Math.min(1, idx));
-                apply();
-              }
-
-              function onPointerDown(clientX) {
-                dragging = true; moved = false;
-                startX = clientX;
-                currentX = clientX;
-                slidesWrap.style.transition = 'none';
-              }
-              function onPointerMove(clientX) {
-                if (!dragging) return;
-                var dx = clientX - startX;
-                currentX = clientX;
-                var base = -index * root.clientWidth;
-                slidesWrap.style.transform = 'translateX(' + (base + dx) + 'px)';
-                moved = true;
-              }
-              function onPointerUp() {
-                if (!dragging) return;
-                var dx = currentX - startX;
-                dragging = false;
-                if (dx > 50) jumpTo(index - 1);
-                else if (dx < -50) jumpTo(index + 1);
-                else apply();
-              }
-
-              root.addEventListener('mousedown', function(e){ onPointerDown(e.clientX); });
-              window.addEventListener('mousemove', function(e){ onPointerMove(e.clientX); });
+              root.addEventListener('mousedown', e => onPointerDown(e.clientX));
+              window.addEventListener('mousemove', e => onPointerMove(e.clientX));
               window.addEventListener('mouseup', onPointerUp);
+              root.addEventListener('touchstart', e => { if(e.touches[0]) onPointerDown(e.touches[0].clientX); }, { passive:true });
+              root.addEventListener('touchmove', e => { if(e.touches[0]) onPointerMove(e.touches[0].clientX); }, { passive:true });
+              root.addEventListener('touchend', onPointerUp, { passive:true });
 
-              root.addEventListener('touchstart', function(e){
-                if (e.touches && e.touches[0]) onPointerDown(e.touches[0].clientX);
-              }, { passive: true });
-              root.addEventListener('touchmove', function(e){
-                if (e.touches && e.touches[0]) onPointerMove(e.touches[0].clientX);
-              }, { passive: true });
-              root.addEventListener('touchend', onPointerUp, { passive: true });
-
-              leftBtn.addEventListener('click', function(){ jumpTo(index - 1); });
-              rightBtn.addEventListener('click', function(){ jumpTo(index + 1); });
-              dots.forEach(function(d, i){ d.addEventListener('click', function(){ jumpTo(i); }); });
-
+              leftBtn.addEventListener('click', () => jumpTo(index - 1));
+              rightBtn.addEventListener('click', () => jumpTo(index + 1));
+              dots.forEach((d,i) => d.addEventListener('click', () => jumpTo(i)));
               apply();
             });
           }

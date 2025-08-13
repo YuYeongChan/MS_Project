@@ -32,7 +32,7 @@ const EditUserInfoScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // ✅ 프로필 사진 선택 함수
+  // 프로필 사진 선택 함수
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -50,7 +50,7 @@ const EditUserInfoScreen = () => {
     }
   };
 
-  // ✅ 회원 정보 업데이트
+  //  회원 정보 업데이트
   const handleUpdate = async () => {
     setIsLoading(true);
     const token = await AsyncStorage.getItem('auth_token');
@@ -104,7 +104,7 @@ const EditUserInfoScreen = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>회원 정보 수정</Text>
 
-      {/* ✅ 프로필 사진 */}
+      {/*  프로필 사진 */}
       <TouchableOpacity onPress={pickProfilePhoto} style={styles.photoBox}>
         {profilePhoto ? (
           <Image source={{ uri: profilePhoto }} style={styles.photo} />

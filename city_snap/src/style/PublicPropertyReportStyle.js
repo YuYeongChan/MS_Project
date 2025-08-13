@@ -222,5 +222,12 @@ export const styles = StyleSheet.create({
       fontSize: 17,
       color: "black",
       fontFamily: 'PretendardGOV-Bold'
-    }  
+    },
+    backButton: {
+        position: 'absolute',
+        top: 60, // 상단 위치
+        right: 10, // 좌측 위치
+        zIndex: 10, // 다른 요소들 위에 오도록 z-index 설정
+        padding: 10, // 터치 영역 확장
+    },
   });

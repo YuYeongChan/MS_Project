@@ -16,6 +16,7 @@ import jwt
 from fastapi.security import OAuth2PasswordBearer
 from fastapi import Depends, Header
 from pydantic import BaseModel
+from urllib.parse import unquote # ADMIN 랭킹 개인정보 확인
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
@@ -509,3 +510,21 @@ def update_report_status(
 ):
     """신고의 파손 및 수리 상태를 업데이트합니다."""
     return rDAO.updateReportStatuses(report_id, is_normal, repair_status)
+
+# 1) 이메일 쿼리 파라미터 방식
+@app.get("/admin/users/by-email")
+def admin_get_user_by_email(email: str):
+    user = aDAO.getUserByEmail(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="유저가 없습니다.")
+    return {"result": user}
+
+# 2) path param 방식도 필요하면 제공 (URL 인코딩 주의)
+@app.get("/admin/users/{user_id}")
+def admin_get_user_by_id(user_id: str):
+    # 안전: 브라우저가 인코딩한 %40 등을 복원
+    uid = unquote(user_id)
+    user = aDAO.getUserDetailsById(uid)
+    if not user:
+        raise HTTPException(status_code=404, detail="유저가 없습니다.")
+    return {"result": user}
