@@ -1,4 +1,5 @@
 import React from 'react';
+import { appEvents, EVENTS } from '../../utils/eventBus'; // 경로 확인
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -92,6 +93,12 @@ export default function AdminReportListScreen() {
                 Alert.alert("성공", "상태가 업데이트되었습니다.");
                 setModalVisible(false);
                 fetchAllReports(); // 목록 새로고침
+                
+                appEvents.emit(EVENTS.REPORT_STATUS_UPDATED, {
+                    reportId: selectedReport.report_id,
+                    repairStatus: repairStatusInModal,
+                    isNormal: damageStatusInModal,
+                    });
             } else {
                 const errorData = await response.json();
                 Alert.alert("실패", errorData.error || "상태 업데이트에 실패했습니다.");

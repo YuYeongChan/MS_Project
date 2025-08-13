@@ -20,24 +20,36 @@ import { styles as listStyles } from "../../style/RankingStyle";
 // ---------- 유틸 ----------
 const cleanStr = (v) => {
   if (v === null || v === undefined) return "";
-  // 양끝 공백, 양끝 큰따옴표 제거, 탭/개행 제거
   return String(v).replace(/[\t\r\n]/g, "").replace(/^"+|"+$/g, "").trim();
 };
+// 가장 먼저 존재하는 값을 집어오는 헬퍼 (중첩 지원)
+const pick = (obj, paths, def = undefined) => {
+  for (const p of paths) {
+    const val = p.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
+    if (val !== undefined && val !== null && val !== '') return val;
+  }
+  return def;
+};
+// 이메일 형태인지 체크
+const isEmail = (v) => typeof v === 'string' && /.+@.+\..+/.test(v);
+// 조회 경로를 상황에 맞게 결정
+const buildUserDetailUrl = (row) => {
+  const uid = row.user_pk || row.id || row.user_id; // 우선 PK/ID가 있으면 사용
+  if (uid && !isEmail(uid)) {
+    // 숫자/UUID 등 PK라면 path-param 사용
+    return `${API_BASE_URL}/admin/users/${encodeURIComponent(String(uid))}`;
+  }
+  // 이메일만 가진 경우: 백엔드에 이메일 조회용 엔드포인트가 있다고 가정
+  // 없으면 백엔드에 하나 만들어 달라고 요청해야 합니다.
+  return `${API_BASE_URL}/admin/users/by-email?email=${encodeURIComponent(String(uid))}`;
+};
 
-// 파일명이 다양하게 올 때도 안전하게 아바타 URL 만들기
+
 const buildAvatarUri = (raw) => {
   if (!raw) return null;
   const v = cleanStr(raw);
-
-  // 이미 http(s) 절대경로면 그대로
   if (/^https?:\/\//i.test(v)) return v;
-
-  // 이미 /profile_photos/로 시작 -> API_BASE_URL + 그대로
-  if (v.startsWith("/profile_photos/")) {
-    return `${API_BASE_URL}${v}`;
-  }
-
-  // 파일명만 온 경우
+  if (v.startsWith("/profile_photos/")) return `${API_BASE_URL}${v}`;
   const file = v.replace(/^\//, "");
   return `${API_BASE_URL}/profile_photos/${file}`;
 };
@@ -76,7 +88,6 @@ export default function AdminRankingContent() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState(null);
 
-  // 진입/포커스 시 토큰 로드
   useFocusEffect(
     useCallback(() => {
       (async () => {
@@ -92,7 +103,6 @@ export default function AdminRankingContent() {
     }, [])
   );
 
-  // 랭킹 로드
   useEffect(() => {
     if (!me?.user_id) return;
     (async () => {
@@ -103,11 +113,9 @@ export default function AdminRankingContent() {
         const data = typeof raw === "string" ? JSON.parse(raw) : raw;
 
         const list = Array.isArray(data?.ranking) ? data.ranking : [];
-
-        // 각 항목 클린업: 닉네임/이름/이메일 중 표시값 정리
         const normalized = list.map((row) => {
           const nickname = cleanStr(row.nickname);
-          const realname = cleanStr(row.realname || row.name); // 혹시 오는 경우
+          const realname = cleanStr(row.realname || row.name);
           const email = cleanStr(row.email);
           const displayName =
             nickname ||
@@ -133,7 +141,6 @@ export default function AdminRankingContent() {
     })();
   }, [me]);
 
-  // 상세 열기
   const openDetail = async (row) => {
     const baseDetail = {
       user_id: cleanStr(row.user_id),
@@ -151,48 +158,54 @@ export default function AdminRankingContent() {
     setDetail(baseDetail);
     setDetailOpen(true);
 
-    // 상세 API로 덮어쓰기
     try {
-      setDetailLoading(true);
-      const token = await AsyncStorage.getItem("auth_token");
-      if (!token) throw new Error("no token");
+    setDetailLoading(true);
+    const token = await AsyncStorage.getItem("auth_token");
+    if (!token) throw new Error("no token");
 
-      const res = await fetch(
-        `${API_BASE_URL}/admin/users/${encodeURIComponent(row.user_id)}`,
-        { headers: { Authorization: `Bearer ${token}`, Accept: "application/json" } }
-      );
+    const url = buildUserDetailUrl(row);
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    });
 
-      if (res.ok) {
-        const json = await res.json();
-        const u = json?.result ?? json;
+    if (res.ok) {
+      const json = await res.json();
+      // u 추출은 이전에 드린 pick() 로직 재사용
+      const u = (json.result ?? json.data ?? json.user ?? json.payload ?? json);
 
-        setDetail((prev) => ({
-          ...prev,
-          email: cleanStr(u?.email) || prev.email,
-          phone: cleanStr(u?.phone ?? u?.phone_number) || prev.phone,
-          address: cleanStr(u?.address) || prev.address,
-          reports_count: safeNumber(u?.reports_count ?? u?.report_count, prev.reports_count),
-          last_report_date: cleanStr(u?.last_report_date) || prev.last_report_date,
-          joined_at: cleanStr(u?.joined_at ?? u?.created_at) || prev.joined_at,
-          profile_pic_url: cleanStr(u?.avatar_url || u?.profile_pic_url || prev.profile_pic_url),
-          nickname:
-            cleanStr(u?.nickname) ||
-            cleanStr(u?.name) ||
-            prev.nickname,
-        }));
+      setDetail((prev) => ({
+        ...prev,
+        phone: (u.phone ?? u.phone_number ?? u.mobile ?? u.tel ?? prev.phone) || "-",
+        address: (u.address ?? u.address_line ?? u.addr ?? u.location ?? prev.address) || "-",
+        reports_count: Number(u.reports_count ?? u.report_count ?? u.total_reports ?? prev.reports_count) || 0,
+        profile_pic_url: (u.avatar_url ?? u.profile_pic_url ?? u.avatar ?? prev.profile_pic_url) || prev.profile_pic_url,
+        nickname: (u.nickname ?? u.name ?? prev.nickname) || prev.nickname,
+      }));
+    } else {
+      const txt = await res.text();
+      console.log('admin/users fetch error:', res.status, txt);
+      if (res.status === 404) {
+        Alert.alert(
+          "사용자 조회 불가",
+          "선택한 항목의 식별자로 사용자를 찾을 수 없습니다.\n(이메일을 ID로 보내고 있을 수 있어요)"
+        );
+      } else {
+        Alert.alert("오류", "사용자 상세를 불러오지 못했습니다.");
       }
-    } catch (e) {
-      // 실패해도 기본정보 표시
-    } finally {
-      setDetailLoading(false);
     }
-  };
+  } catch (e) {
+    console.log('openDetail error:', e);
+    Alert.alert("오류", "사용자 상세 조회 중 문제가 발생했습니다.");
+  } finally {
+    setDetailLoading(false);
+  }
 
-  // 왕관 색상
+  setDetailOpen(true);
+};
+
   const crownColor = (rank) =>
     rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : null;
 
-  // 리스트 아이템
   const renderItem = ({ item }) => {
     const crown = crownColor(item.rank);
     const uri = buildAvatarUri(item.profile_pic_url);
@@ -276,31 +289,26 @@ export default function AdminRankingContent() {
               </View>
             ) : (
               <>
-                {/* 헤더 */}
-                <View style={{ flexDirection: "row", alignItems: "center" }}>
+                {/* 헤더: 아바타만 표시 (개인정보 최소화) */}
+                <View style={{ alignItems: "center", marginBottom: 10 }}>
                   {buildAvatarUri(detail?.profile_pic_url) ? (
                     <Image
                       source={{ uri: buildAvatarUri(detail?.profile_pic_url) }}
-                      style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#eee" }}
+                      style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#eee" }}
                     />
                   ) : (
-                    <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: "#eee" }} />
+                    <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: "#eee" }} />
                   )}
-                  <View style={{ marginLeft: 12 }}>
-                    <Text style={{ fontSize: 18, fontWeight: "800" }}>{cleanStr(detail?.nickname)}</Text>
-                    <Text style={{ fontSize: 12, color: "#666" }}>{cleanStr(detail?.user_id)}</Text>
-                  </View>
                 </View>
 
-                {/* 본문 */}
-                <View style={{ marginTop: 12 }}>
+                {/* 본문: 요청하신 5개 항목만 노출 */}
+                <View style={{ marginTop: 4 }}>
                   <KV label="점수" value={fmtNum(detail?.score)} />
                   <KV label="신고 횟수" value={fmtNum(detail?.reports_count)} />
-                  <KV label="최근 신고" value={fmtDate(detail?.last_report_date)} />
-                  <KV label="이메일" value={cleanStr(detail?.email) || "-"} />
+                  <KV label="닉네임" value={cleanStr(detail?.nickname) || "-"} />
+                  <KV label="아이디" value={cleanStr(detail?.user_id)} />
                   <KV label="전화번호" value={cleanStr(detail?.phone) || "-"} />
                   <KV label="주소" value={cleanStr(detail?.address) || "-"} />
-                  <KV label="가입일" value={fmtDate(detail?.joined_at)} />
                 </View>
 
                 <TouchableOpacity style={s.closeBtn} onPress={() => setDetailOpen(false)}>
