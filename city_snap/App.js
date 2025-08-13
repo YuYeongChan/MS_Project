@@ -1,6 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
+import { useCallback } from 'react';
+import { View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+// ---- Screens ----
 import TopBar from './src/contents/TopBar';
 import MainScreen from "./src/contents/MainScreen";
 import PublicPropertyReportScreen from './src/contents/PublicPropertyReportScreen';
@@ -8,19 +15,17 @@ import AccountScreen from "./src/contents/AccountScreen";
 import SignUpScreen from "./src/contents/SignUpScreen";
 import MyInfoScreen from "./src/contents/MyInfoScreen";
 import DamageMapScreen from './src/contents/DamageMapScreen';
-import MyDamageListScreen from './src/contents/MyDamageListScreen';
 import RankingScreen from './src/contents/RankingScreen';
 import SettingsScreen from './src/contents/SettingsScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import AdminMainScreen from './src/contents/Admin/AdminMainScreen';
-import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
-import { useCallback } from 'react';
-import { View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
 import MyReportsScreen from './src/contents/MyReportsScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
+
+// ---- auth bootstrap ----
+import { AuthProvider, useAuth } from './src/auth/authProvider';
+import AuthGate from './src/auth/authGate';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -89,6 +94,46 @@ function UserTabNavigator() {
   );
 }
 
+// 비로그인 시 사용 스택
+function AuthStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="AccountScreen">
+      <Stack.Screen name="AccountScreen" component={AccountScreen} />
+      <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// 일반 사용자 앱 스택
+function UserAppStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="UserTabNavigator">
+      <Stack.Screen name="UserTabNavigator" component={UserTabNavigator} />
+      <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} />
+      <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
+      <Stack.Screen name="EditUserInfoScreen" component={EditUserInfoScreen} />
+      <Stack.Screen name="MyReportsScreen" component={MyReportsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+// 관리자 앱 스택
+function AdminAppStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
+      <Stack.Screen name="AdminLayout" component={AdminLayout} />
+    </Stack.Navigator>
+  );
+}
+
+// 로그인 여부, role에 따라 스위칭
+function RootNavigator() {
+  const { isSignedIn, user } = useAuth();
+  if (!isSignedIn) return <AuthStack />;
+  return user?.role === 'admin' ? <AdminAppStack /> : <UserAppStack />;
+}
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'PretendardGOV-Regular': require('./fonts/PretendardGOV-Regular.otf'),
@@ -108,20 +153,13 @@ export default function App() {
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <NavigationContainer>
-        <Stack.Navigator initialRouteName="AccountScreen" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="AccountScreen" component={AccountScreen} />
-          <Stack.Screen name="SignUpScreen" component={SignUpScreen} />
-          <Stack.Screen name="UserTabNavigator" component={UserTabNavigator} />
-          <Stack.Screen name="PublicPropertyReportScreen" component={PublicPropertyReportScreen} />
-          <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
-          <Stack.Screen name="AdminLayout" component={AdminLayout} />
-          <Stack.Screen name="DamageMapScreen" component={DamageMapScreen} />
-
-          <Stack.Screen name="EditUserInfoScreen" component={EditUserInfoScreen} />
-          <Stack.Screen name="MyReportsScreen" component={MyReportsScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
+      <AuthProvider>
+        <AuthGate>
+          <NavigationContainer>
+            <RootNavigator />
+          </NavigationContainer>
+        </AuthGate>
+      </AuthProvider>
     </View>
   );
 }

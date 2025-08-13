@@ -1,12 +1,10 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { View, Text, TouchableOpacity, Alert } from "react-native";
 import { styles }  from "../../style/AdminStyle";
 
 const AdminMainScreen = ({ navigation }) => {
     const handleLogout = async () => {
-        await AsyncStorage.removeItem("auth_token");
-        await AsyncStorage.removeItem("user_id");
+        await clearTokens();
         Alert.alert("로그아웃", "로그아웃되었습니다.");
         navigation.replace("AccountScreen"); // 로그인 화면으로 이동
     };
@@ -17,8 +15,8 @@ const AdminMainScreen = ({ navigation }) => {
             <Text style={styles.subtitle}>환영합니다, 관리자님 </Text>
 
             <TouchableOpacity
-            style={styles.button}
-            onPress={() => navigation.navigate("AdminLayout", { initialRoute: "Damage" })}
+                style={styles.button}
+                onPress={() => navigation.navigate("AdminLayout", { initialRoute: "Damage" })}
             >
             <Text style={styles.buttonText}>파손 현황</Text>
             </TouchableOpacity>

@@ -12,11 +12,12 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_BASE_URL } from '../utils/config';
 import Postcode from '@actbase/react-daum-postcode';
 import * as ImagePicker from 'expo-image-picker';
+import { apiFetch } from '../auth/api';
+import { getTokens, saveTokens } from '../auth/authStorage';
 
 const EditUserInfoScreen = () => {
   const route = useRoute();
@@ -32,7 +33,7 @@ const EditUserInfoScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // ✅ 프로필 사진 선택 함수
+  // 프로필 사진 선택 함수
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -50,10 +51,9 @@ const EditUserInfoScreen = () => {
     }
   };
 
-  // ✅ 회원 정보 업데이트
+  // 회원 정보 업데이트
   const handleUpdate = async () => {
     setIsLoading(true);
-    const token = await AsyncStorage.getItem('auth_token');
 
     try {
       const formData = new FormData();
@@ -71,27 +71,22 @@ const EditUserInfoScreen = () => {
         });
       }
 
-      const response = await fetch(`${API_BASE_URL}/update_user_info`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // Content-Type 생략 (FormData는 자동 설정됨)
-        },
-        body: formData,
-      });
+      console.log(formData);
+      
+      // Authorization 헤더 필요 없음 (apiFetch가 자동 첨부)
+      const res = await apiFetch('/update_user_info', { method: 'PATCH', body: formData });
+      const result = await res.json();
 
-      const result = await response.json();
-
-      if (response.ok) {
-        if (result.token) {
-          await AsyncStorage.setItem('auth_token', result.token);
-        }
-        Alert.alert('수정 완료', '회원 정보가 수정되었습니다.', [
-          { text: '확인', onPress: () => navigation.goBack() },
-        ]);
-      } else {
-        Alert.alert('수정 실패', result.message || '오류가 발생했습니다.');
+      // 서버가 새 access token을 돌려주는 경우 반영
+      if (result?.token) {
+        const { refresh } = await getTokens(); // 기존 refresh 유지
+        await saveTokens({ access: result.token, refresh });
       }
+
+      Alert.alert('수정 완료', '회원 정보가 수정되었습니다.', [
+        { text: '확인', onPress: () => navigation.goBack() },
+      ]);
+
     } catch (error) {
       console.error('수정 오류:', error);
       Alert.alert('오류', '서버와의 연결에 실패했습니다.');
@@ -104,7 +99,7 @@ const EditUserInfoScreen = () => {
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>회원 정보 수정</Text>
 
-      {/* ✅ 프로필 사진 */}
+      {/* 프로필 사진 */}
       <TouchableOpacity onPress={pickProfilePhoto} style={styles.photoBox}>
         {profilePhoto ? (
           <Image source={{ uri: profilePhoto }} style={styles.photo} />

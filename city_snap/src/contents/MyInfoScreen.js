@@ -4,18 +4,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
 import { useNavigation, useIsFocused } from '@react-navigation/native';
 import { API_BASE_URL } from '../utils/config';
+import { apiFetch } from '../auth/api';
+import { getTokens } from '../auth/authStorage'
+import { useAuth } from '../auth/authProvider';
 
 const MyInfoScreen = () => {
   const [userInfo, setUserInfo] = useState(null);
   const navigation = useNavigation();
   const isFocused = useIsFocused(); //  포커스 여부 감지
+  
+  const { signOut } = useAuth(); 
 
   useEffect(() => {
     const loadUserInfo = async () => {
-      const token = await AsyncStorage.getItem('auth_token');
-      if (token) {
-        try {
-          const decoded = jwt_decode(token);
+      const { access } = await getTokens();
+      if (access){
+        try{
+          const decoded = jwt_decode(access);
           setUserInfo(decoded);
         } catch (error) {
           console.error('토큰 디코딩 오류:', error);
@@ -35,8 +40,7 @@ const MyInfoScreen = () => {
         text: "로그아웃", 
         style: "destructive",
         onPress: async () => {
-          await AsyncStorage.removeItem('auth_token');
-          navigation.replace("AccountScreen");
+          await signOut();
         } 
       }
     ]);
@@ -49,26 +53,23 @@ const MyInfoScreen = () => {
         text: "탈퇴",
         style: "destructive",
         onPress: async () => {
-          const token = await AsyncStorage.getItem('auth_token');
+          
           try {
-            const response = await fetch(`${API_BASE_URL}/delete_account`, {
-              method: "DELETE",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
 
-            const data = await response.json();
-            if (response.ok) {
+            const res = await apiFetch('/delete_account', { method: 'DELETE' });
+            const result = await res.json();
+
+            if(res.ok){
               Alert.alert("탈퇴 완료", "계정이 삭제되었습니다.");
-              await AsyncStorage.removeItem('auth_token');
+              await signOut();                                // SecureStore 비우기
               navigation.replace("AccountScreen");
             } else {
-              Alert.alert("탈퇴 실패", data.message || "오류가 발생했습니다.");
+              Alert.alert("탈퇴 실패", result.message || "오류가 발생했습니다.");
             }
+
           } catch (error) {
             console.error("탈퇴 요청 중 오류:", error);
-            Alert.alert("네트워크 오류", "서버에 연결할 수 없습니다.");
+            Alert.alert("탈퇴 실패", "오류가 발생했습니다.");
           }
         },
       },
@@ -84,7 +85,10 @@ const MyInfoScreen = () => {
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={styles.container}
+      style={{backgroundColor: '#436D9D'}}
+    >
       <Text style={styles.title}>내 정보</Text>
 
       {userInfo.profile_pic_url && (

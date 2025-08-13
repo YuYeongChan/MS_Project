@@ -1,4 +1,5 @@
 import os
+import sys
 import jwt
 from datetime import datetime, timedelta, timezone
 from fastapi.responses import JSONResponse
@@ -7,9 +8,14 @@ from passlib.context import CryptContext
 from cryptography.fernet import Fernet
 from fastapi import UploadFile
 from typing import Optional
-
 from ProjectDB.SSY.ssyFileNameGenerator import SsyFileNameGenerator 
 
+# 상위 공간의 token_utils import
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from token_utils import create_refresh_token, ALGORITHM, SECRET_KEY, ACCESS_EXPIRE_MIN
 
 # --- 보안 설정 시작 (기존과 동일, FERNET_KEY는 환경 변수 권장) ---
 FERNET_KEY = b"r21VL_bAV6QO7fQsYfrE4yRDtuO2ZCb5TuOCSGb6chc="
@@ -26,9 +32,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class AccountDAO:
     def __init__(self):
-        self.jwtKey = os.environ.get("JWT_SECRET_KEY", "your_jwt_secret_key_here_please_change_this_to_a_strong_key") # 실제 배포 시 변경 필수
-        self.jwtAlgorithm = "HS256"
-        self.profilePhotoFolder = "./profile_photos/" 
+        self.profilePhotoFolder = "./profile_photos/"
 
     def hash_password(self, password: str) -> str:
         return pwd_context.hash(password)
@@ -179,10 +183,19 @@ class AccountDAO:
                         "profile_pic_url": profile_pic_url,
                         "phone_number": phone_number,
                         "role": "admin" if int(is_admin) == 1 else "user",  #  role 추가
-                        "exp": datetime.now(timezone.utc) + timedelta(hours=1),
+                        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_EXPIRE_MIN),
                     }
-                    token = jwt.encode(payload, self.jwtKey, self.jwtAlgorithm)
-                    return JSONResponse({"result": "로그인 성공", "token": token}, status_code=200, headers=h)
+
+                    # 앱 켜진 상태에서 단기 연결 유지용 token
+                    access_token = jwt.encode(payload, SECRET_KEY, ALGORITHM)
+                    # 앱 꺼진 상태에서 장기 로그인 유지용 token
+                    refresh_token = create_refresh_token(user_id)
+
+                    return JSONResponse(
+                        {"result": "로그인 성공", "token": access_token, "refreshToken" : refresh_token},
+                        status_code=200,
+                        headers=h
+                    )
 
                 return JSONResponse({"result": "로그인 실패: 비밀번호 불일치"}, status_code=401, headers=h)
 
@@ -246,6 +259,7 @@ class AccountDAO:
             cur.execute(sql, {'limit': limit})
 
             ranking_list = []
+            myRanking = 0
             for profile, user_id, nickname, score, rank in cur:
                 ranking_list.append({
                     "profile_pic_url": profile,
@@ -255,29 +269,9 @@ class AccountDAO:
                     "rank": rank
                 })
 
-        except Exception as e:
-            print(f"랭킹 조회 중 오류 발생: {e}")
-            return JSONResponse({"result": f"랭킹 조회 DB 오류: {e}"}, status_code=500, headers=h)
-        
-        # 내 등수 조회
-        try:
-            sql = """
-                SELECT profile_pic_url, user_id, nickname, score, RANK() OVER (ORDER BY score DESC) AS rank
-                FROM Users 
-                WHERE user_id = :userId
-                ORDER BY score DESC
-            """
-            cur.execute(sql, {'userId': userId})
-
-            myRanking = []
-            for profile, user_id, nickname, score, rank in cur:
-                myRanking.append({
-                    "profile_pic_url": profile,
-                    "user_id": user_id,
-                    "nickname": nickname,
-                    "score": score,
-                    "rank": rank
-                })
+                # 내 등수 저장
+                if user_id == userId:
+                    myRanking = rank
 
             rankingData = {
                 "result": "랭킹 조회 성공",

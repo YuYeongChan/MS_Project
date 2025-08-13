@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, FlatList, Image, ActivityIndicator } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import jwt_decode from 'jwt-decode';
 import { API_BASE_URL } from '../utils/config';
 import { styles } from '../style/RankingStyle';
 import { useFocusEffect } from '@react-navigation/native';
+import { getTokens } from '../auth/authStorage'
 
 export default function RankingScreen() {
   const [userInfo, setUserInfo] = useState(null);
@@ -18,10 +18,10 @@ export default function RankingScreen() {
       useCallback(() => {
           // 사용자 정보 로드
           const loadUserInfo = async () => {
-            const token = await AsyncStorage.getItem('auth_token');
-            if (token) {
-              try {
-                const decoded = jwt_decode(token);
+            const { access } = await getTokens();
+            if (access){
+              try{
+                const decoded = jwt_decode(access);
                 setUserInfo(decoded);
               } catch (error) {
                 console.error('토큰 디코딩 오류:', error);
@@ -47,7 +47,7 @@ export default function RankingScreen() {
           parsed = data;
         }
         // 현재 사용자의 랭킹
-        setMyRanking(parsed.myRanking[0].rank);
+        setMyRanking(parsed.myRanking);
         // 전체 중 100명까지의 랭킹
         setRanking(parsed.ranking || []);
         setLoading(false);

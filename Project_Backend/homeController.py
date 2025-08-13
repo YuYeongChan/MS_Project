@@ -1,6 +1,6 @@
 import sys
 import os
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTasks, APIRouter,Query # APIRouter 임포트 유지
+from fastapi import FastAPI, Form, UploadFile, HTTPException, File, APIRouter, Query # APIRouter 임포트 유지
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
@@ -12,15 +12,12 @@ import shutil # shutil 임포트 유지
 import json # json 임포트 유지
 from datetime import datetime, timedelta
 import jwt
-#개인정보 수정
-from fastapi.security import OAuth2PasswordBearer
+# 개인정보 수정
 from fastapi import Depends, Header
 from pydantic import BaseModel
+from token_utils import create_access_token, create_refresh_token, REFRESH_SECRET_KEY, SECRET_KEY, ALGORITHM
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-
-SECRET_KEY = SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your_jwt_secret_key_here_please_change_this_to_a_strong_key")
-ALGORITHM = "HS256"
 
 # DAO 인스턴스 생성
 aDAO = AccountDAO()
@@ -29,7 +26,7 @@ msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
 regDAO = RegistrationDAO()
 
-#JWT 함수들(개인정보수정 토큰)
+# JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
@@ -58,12 +55,11 @@ def issue_token(user_id: str):
 
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
     
-#개인정보 수정 
+# 개인정보 수정 
 class UpdateUserInfoRequest(BaseModel):
     nickname: Optional[str]
     phone_number: Optional[str]
     address: Optional[str]
-
 
 UPLOAD_PROFILE_DIR = os.path.join(os.path.dirname(__file__), "profile_photos")
 #폴더가 없다면 생성
@@ -474,3 +470,43 @@ def delete_my_report(report_id: int, current_user: Dict = Depends(get_current_us
         return {"message": "삭제 성공"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"삭제 실패: {str(e)}")
+    
+class RefreshIn(BaseModel):
+    refreshToken: str
+
+@app.post("/auth/refresh")
+def auth_refresh(body: RefreshIn):
+    # 1) refresh 토큰 검증
+    try:
+        payload = jwt.decode(body.refreshToken, REFRESH_SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("typ") != "refresh":
+            raise HTTPException(status_code=401, detail="유효하지 않은 refresh 토큰")
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="유효하지 않은 refresh 토큰")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="refresh 토큰 만료")
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=401, detail="유효하지 않은 refresh 토큰")
+
+    # 2) 유저 검증(권장)
+    user_info = aDAO.getUserInfo(user_id)
+    if not user_info:
+        raise HTTPException(status_code=401, detail="사용자 없음")
+
+    # 3) access 토큰 새 발급 (payload 구성은 issue_token과 동일 컨셉)
+    payload = {
+        "user_id": user_id,
+        "nickname": user_info["nickname"],
+        "name": user_info["name"],
+        "address": user_info["address"],
+        "resident_id_number": user_info["resident_id_number"],
+        "score": user_info["score"],
+        "profile_pic_url": user_info["profile_pic_url"],
+        "phone_number": user_info["phone_number"],
+        "role": "admin" if user_info.get("is_admin") else "user",
+    }
+    new_access = create_access_token(payload)
+
+    # (선택) refresh rotation: 새 refresh도 함께 내려주고, 이전 refresh를 폐기(블랙리스트/DB저장)하는 설계 권장
+    return {"accessToken": new_access}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import * as ImagePicker from "expo-image-picker";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio } from "expo-av";
 import {
   Alert,
@@ -11,7 +10,7 @@ import {
   TouchableOpacity,
   View,
   Platform,
-  ActivityIndicator, // ✅ 로딩 인디케이터를 위해 추가
+  ActivityIndicator, // 로딩 인디케이터를 위해 추가
   ScrollView, // 추가
 } from "react-native";
 import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
@@ -21,6 +20,9 @@ import { API_BASE_URL } from "../utils/config";
 import axios from "axios";
 import { googleMapsApiKey } from "../utils/config";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { getTokens } from "../auth/authStorage";
+import { apiFetch } from "../auth/api";
+import jwt_decode from 'jwt-decode';
 
 const PublicPropertyReportScreen = () => {
   const [photo, setPhoto] = useState(null);
@@ -31,9 +33,7 @@ const PublicPropertyReportScreen = () => {
   const [tempSelectedLocation, setTempSelectedLocation] = useState(null);
   const [modalType, setModalType] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [recording, setRecording] = useState(null);
-  const [audioUri, setAudioUri] = useState(null);
   const [voiceState, setVoiceState] = useState("idle");
 
   useEffect(() => {
@@ -62,7 +62,7 @@ const PublicPropertyReportScreen = () => {
     }
   };
 
-  // ✅ handleLocation 함수가 이제 주소 정보도 함께 받습니다.
+  // handleLocation 함수가 이제 주소 정보도 함께 받습니다.
 
   const handleLocation = (coords) => {
     setTempSelectedLocation(coords);
@@ -91,9 +91,17 @@ const PublicPropertyReportScreen = () => {
       return;
     }
     setIsLoading(true);
-    const userId = await AsyncStorage.getItem("user_id");
-    const token = await AsyncStorage.getItem("auth_token");
-    if (!userId || !token) {
+
+    const { access } = await getTokens();
+    let userid;
+    if (access) {
+      try{
+        const decoded = jwt_decode(access);
+        userid = decoded.user_id;
+      } catch (error) {
+        console.error('토큰 디코딩 오류:', error);
+      }
+    } else {
       Alert.alert("로그인 필요", "다시 로그인해주세요.");
       setIsLoading(false);
       return;
@@ -112,20 +120,16 @@ const PublicPropertyReportScreen = () => {
     formData.append('address', location.address);
     formData.append('report_date', date);
     formData.append('details', detail);
-    formData.append('user_id', userId);
+    formData.append('user_id', userid);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/registration.write`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-          Accept: "application/json",
-        },
+      const res = await apiFetch('/registration.write', {
+        method: 'POST',
         body: formData,
       });
-      const responseData = await response.json();
-      if (response.ok) {
+
+      const responseData = await res.json();
+      if (res.ok) {
         Alert.alert(
           "신고 성공",
           responseData.result || "신고가 성공적으로 등록되었습니다."
