@@ -62,14 +62,12 @@ def process_audio_and_get_structured_data(audio_path: str) -> dict:
                         "endpoint": "https://ainuri-search.search.windows.net",
                         "index_name": "ainuri-index",
                         "authentication": {
-
                                 # 따로 ai search리소스 찾아 들어가서 설정 - 키 - 기본 관리자 키
                         },
                         "embedding_dependency": {
                             "type": "endpoint",
                             "endpoint": "https://team01-05-4067-resource.cognitiveservices.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview",
                             "authentication": { 
-
                             },
                         }
                     },

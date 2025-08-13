@@ -11,13 +11,33 @@ import {
   Modal,
   Image,
   Platform,
+  SafeAreaView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_BASE_URL } from '../utils/config';
 import Postcode from '@actbase/react-daum-postcode';
 import * as ImagePicker from 'expo-image-picker';
+import { Feather } from '@expo/vector-icons';
 
+// --- 재사용 가능한 입력 필드 컴포넌트 ---
+const InputField = ({ label, value, onChangeText, placeholder, keyboardType = 'default', maxLength }) => (
+  <View style={styles.inputContainer}>
+    <Text style={styles.label}>{label}</Text>
+    <TextInput
+      style={styles.input}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+      placeholderTextColor="#bdc3c7"
+      keyboardType={keyboardType}
+      maxLength={maxLength}
+    />
+  </View>
+);
+
+// --- 메인 화면 컴포넌트 ---
 const EditUserInfoScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
@@ -27,12 +47,12 @@ const EditUserInfoScreen = () => {
   const [phoneNumber, setPhoneNumber] = useState(userInfo.phone_number || '');
   const [address, setAddress] = useState(userInfo.address || '');
   const [detailAddress, setDetailAddress] = useState(userInfo.detail_address || '');
-  const [profilePhoto, setProfilePhoto] = useState(userInfo.profile_pic_url || null);
-
+  const [profilePhoto, setProfilePhoto] = useState(userInfo.profile_pic_url ? `${API_BASE_URL}/profile_photos/${userInfo.profile_pic_url}` : null);
+  
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // ✅ 프로필 사진 선택 함수
+  // 프로필 사진 선택 함수 (기존 로직 유지)
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -50,32 +70,33 @@ const EditUserInfoScreen = () => {
     }
   };
 
-  // ✅ 회원 정보 업데이트
+  // 회원 정보 업데이트 함수 (기존 로직 유지)
   const handleUpdate = async () => {
     setIsLoading(true);
     const token = await AsyncStorage.getItem('auth_token');
+    const formData = new FormData();
+
+    formData.append('nickname', nickname);
+    formData.append('phone_number', phoneNumber);
+    formData.append('address', address);
+    formData.append('detail_address', detailAddress);
+
+    if (profilePhoto && !profilePhoto.startsWith('http')) {
+      const filename = profilePhoto.split('/').pop();
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : `image`;
+      formData.append('profile_pic', {
+        uri: Platform.OS === 'android' ? profilePhoto : profilePhoto.replace('file://', ''),
+        name: filename,
+        type,
+      });
+    }
 
     try {
-      const formData = new FormData();
-      formData.append('nickname', nickname);
-      formData.append('phone_number', phoneNumber);
-      formData.append('address', address + ' ' + detailAddress);
-
-      if (profilePhoto && !profilePhoto.startsWith('http')) {
-        const filename = profilePhoto.split('/').pop();
-        const type = `image/${filename.split('.').pop()}`;
-        formData.append('profile_pic', {
-          uri: Platform.OS === 'android' ? profilePhoto : profilePhoto.replace('file://', ''),
-          name: filename,
-          type: type,
-        });
-      }
-
       const response = await fetch(`${API_BASE_URL}/update_user_info`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
-          // Content-Type 생략 (FormData는 자동 설정됨)
         },
         body: formData,
       });
@@ -99,173 +120,217 @@ const EditUserInfoScreen = () => {
       setIsLoading(false);
     }
   };
+  
+  // 전화번호 자동 하이픈 함수
+  const formatPhoneNumber = (text) => {
+    let digits = text.replace(/[^0-9]/g, '');
+    if (digits.length > 11) digits = digits.substring(0, 11);
+    if (digits.length < 4) return digits;
+    if (digits.length < 8) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+    return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+  };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>회원 정보 수정</Text>
-
-      {/* ✅ 프로필 사진 */}
-      <TouchableOpacity onPress={pickProfilePhoto} style={styles.photoBox}>
-        {profilePhoto ? (
-          <Image source={{ uri: profilePhoto }} style={styles.photo} />
-        ) : (
-          <Text style={styles.addPhotoText}>프로필 사진 추가</Text>
-        )}
-      </TouchableOpacity>
-
-      <Text style={styles.label}>닉네임</Text>
-      <TextInput
-        style={styles.input}
-        value={nickname}
-        onChangeText={setNickname}
-        placeholder="닉네임"
-      />
-
-      <Text style={styles.label}>전화번호</Text>
-      <TextInput
-        style={styles.input}
-        value={phoneNumber}
-        onChangeText={(text) => {
-      
-          let digits = text.replace(/[^0-9]/g, '');
-
-          if (digits.length > 11) digits = digits.substring(0, 11);
-
-          if (digits.length < 4) {
-            setPhoneNumber(digits);
-          } else if (digits.length < 8) {
-            setPhoneNumber(`${digits.slice(0, 3)}-${digits.slice(3)}`);
-          } else {
-            setPhoneNumber(`${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`);
-          }
-        }}
-        keyboardType="number-pad"
-        placeholder="010-0000-0000"
-        maxLength={13} 
-      />
-
-      <Text style={styles.label}>주소</Text>
-      <TouchableOpacity
-        style={styles.addressSearchButton}
-        onPress={() => setIsModalVisible(true)}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
       >
-        <Text style={styles.addressSearchText}>주소 검색</Text>
-      </TouchableOpacity>
+        <ScrollView contentContainerStyle={styles.container}>
+          <Text style={styles.title}>정보 수정</Text>
 
-      <TextInput
-        style={[styles.input, { marginTop: 10 }]}
-        value={address}
-        onChangeText={setAddress}
-        placeholder="주소"
-      />
-      <Text style={styles.label}>상세 주소</Text>
-      <TextInput
-        style={styles.input}
-        value={detailAddress}
-        onChangeText={setDetailAddress}
-        placeholder="상세 주소 (예: 101동 202호)"
-      />
+          <View style={styles.profileContainer}>
+            <TouchableOpacity onPress={pickProfilePhoto}>
+              {profilePhoto ? (
+                <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+              ) : (
+                <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
+                  <Feather name="user" size={50} color="#fff" />
+                </View>
+              )}
+              <View style={styles.cameraIcon}>
+                <Feather name="camera" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </View>
 
-      <TouchableOpacity
-        style={styles.updateButton}
-        onPress={handleUpdate}
-        disabled={isLoading}
-      >
-        {isLoading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.updateText}>수정하기</Text>
-        )}
-      </TouchableOpacity>
+          <InputField
+            label="닉네임"
+            value={nickname}
+            onChangeText={setNickname}
+            placeholder="새 닉네임을 입력하세요"
+          />
+          <InputField
+            label="전화번호"
+            value={phoneNumber}
+            onChangeText={(text) => setPhoneNumber(formatPhoneNumber(text))}
+            placeholder="010-1234-5678"
+            keyboardType="number-pad"
+            maxLength={13}
+          />
+          
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>주소</Text>
+            <View style={styles.addressRow}>
+              <TextInput
+                style={[styles.input, styles.addressInput]} 
+                value={address}
+                editable={false}
+                placeholder="주소 검색 버튼을 눌러주세요"
+                placeholderTextColor="#bdc3c7"
+                multiline 
+              />
+              <TouchableOpacity style={styles.addressButton} onPress={() => setIsModalVisible(true)}>
+                <Text style={styles.addressButtonText}>검색</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <InputField
+            label="상세주소"
+            value={detailAddress}
+            onChangeText={setDetailAddress}
+            placeholder="상세주소를 입력하세요"
+          />
 
-      {/* 주소 검색 모달 */}
+          <TouchableOpacity
+            style={styles.mainButton}
+            onPress={handleUpdate}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.mainButtonText}>수정 완료</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
+
       <Modal visible={isModalVisible} animationType="slide">
-        <Postcode
-          style={{ flex: 1 }}
-          jsOptions={{ animation: true }}
-          onSelected={(data) => {
-            setAddress(data.address);
-            setIsModalVisible(false);
-          }}
-          onError={() => setIsModalVisible(false)}
-        />
+        <SafeAreaView style={{flex: 1}}>
+            <TouchableOpacity onPress={() => setIsModalVisible(false)} style={styles.closeButton}>
+                <Feather name="x" size={24} color="#000" />
+            </TouchableOpacity>
+            <Postcode
+                style={{ flex: 1 }}
+                jsOptions={{ animation: true }}
+                onSelected={(data) => {
+                    setAddress(data.address);
+                    setIsModalVisible(false);
+                }}
+                onError={() => setIsModalVisible(false)}
+            />
+        </SafeAreaView>
       </Modal>
-    </ScrollView>
+    </SafeAreaView>
   );
 };
 
+// --- 스타일시트 ---
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f4f6f8',
+  },
   container: {
-    padding: 20,
-    paddingTop: 60,
-    backgroundColor: '#436D9D',
+    // [핵심 수정] 타이틀이 잘리지 않도록 상단 여백을 충분히 확보합니다.
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    paddingTop: 50,
     flexGrow: 1,
   },
   title: {
-    fontSize: 28,
-    color: 'white',
-    fontFamily: 'PretendardGOV-Bold',
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#2c3e50',
     marginBottom: 30,
     textAlign: 'center',
   },
-  photoBox: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#fff',
-    alignSelf: 'center',
+  profileContainer: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  profileImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+  },
+  profileImagePlaceholder: {
+    backgroundColor: '#bdc3c7',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  cameraIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#3498DB',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#f4f6f8',
+  },
+  inputContainer: {
     marginBottom: 20,
-    overflow: 'hidden',
-  },
-  photo: {
-    width: '100%',
-    height: '100%',
-  },
-  addPhotoText: {
-    color: '#555',
-    fontSize: 14,
   },
   label: {
-    color: 'white',
-    fontSize: 16,
-    fontFamily: 'PretendardGOV-Bold',
-    marginBottom: 5,
-    marginTop: 15,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7f8c8d',
+    marginBottom: 8,
   },
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 16,
-    fontFamily: 'PretendardGOV-Regular',
-    marginBottom: 10,
+    color: '#2c3e50',
+    borderWidth: 1,
+    borderColor: '#ecf0f1',
   },
-  addressSearchButton: {
-    marginTop: 5,
-    padding: 10,
-    backgroundColor: '#007bff',
+  addressInput: {
+    flex: 1,
+    height: 80, 
+    textAlignVertical: 'top', 
+    paddingTop: 12, 
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  addressButton: {
+    marginLeft: 10,
+    backgroundColor: '#95a5a6',
+    paddingHorizontal: 15,
+    paddingVertical: 13,
     borderRadius: 10,
-    alignItems: 'center',
   },
-  addressSearchText: {
-    color: 'white',
-    fontSize: 15,
-    fontFamily: 'PretendardGOV-Regular',
+  addressButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
   },
-  updateButton: {
-    marginTop: 30,
-    backgroundColor: '#28a745',
+  mainButton: {
+    backgroundColor: '#3498DB',
+    width: '100%',
     paddingVertical: 14,
-    borderRadius: 20,
+    borderRadius: 12,
     alignItems: 'center',
+    marginTop: 20,
   },
-  updateText: {
+  mainButtonText: {
     color: 'white',
     fontSize: 17,
-    fontFamily: 'PretendardGOV-Bold',
+    fontWeight: 'bold',
   },
+  closeButton: {
+    alignSelf: 'flex-end',
+    padding: 10,
+  }
 });
 
 export default EditUserInfoScreen;

@@ -8,9 +8,7 @@ import AccountScreen from "./src/contents/AccountScreen";
 import SignUpScreen from "./src/contents/SignUpScreen";
 import MyInfoScreen from "./src/contents/MyInfoScreen";
 import DamageMapScreen from './src/contents/DamageMapScreen';
-import MyDamageListScreen from './src/contents/MyDamageListScreen';
 import RankingScreen from './src/contents/RankingScreen';
-import SettingsScreen from './src/contents/SettingsScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
@@ -82,7 +80,6 @@ function UserTabNavigator() {
         <Tab.Screen name="NoticeBoardScreen" component={NoticeBoardScreen} options={{ title: '공지 사항' }} />
         <Tab.Screen name="RankingScreen" component={RankingScreen} options={{ title: '순위표' }} />
         <Tab.Screen name="MyInfoScreen" component={MyInfoScreen} options={{ title: '내 정보' }} />
-        <Tab.Screen name="SettingsScreen" component={SettingsScreen} options={{ title: '설정' }} />
       </Tab.Navigator>
     </>
   );

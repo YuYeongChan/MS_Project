@@ -26,7 +26,7 @@ export const styles = StyleSheet.create({
     },
     title: {
         fontSize: 18,
-        color: "#436D9D",
+        color: "#2c3e50",
         fontFamily: 'PretendardGOV-Bold',
         marginBottom: 10,
     },
