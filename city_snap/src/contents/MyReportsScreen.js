@@ -109,7 +109,7 @@ const MyReportsScreen = () => {
             <View key={item.report_id} style={styles.card}>
               <Image
                 source={item.photo_url
-                  ? { uri: `${_BASE_URL}/registration_photos/${item.photo_url}` }
+                  ? { uri: `${API_BASE_URL}/registration_photos/${item.photo_url}` }
                   : require("./img/noimage.png")}
                 style={styles.image}
               />

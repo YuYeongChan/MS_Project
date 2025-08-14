@@ -16,20 +16,20 @@ export default function RankingScreen() {
   // 페이지 접근 시 순위표 reload
   useFocusEffect(
       useCallback(() => {
-          // 사용자 정보 로드
-          const loadUserInfo = async () => {
-            const { access } = await getTokens();
-            if (access){
-              try{
-                const decoded = jwt_decode(access);
-                setUserInfo(decoded);
-              } catch (error) {
-                console.error('토큰 디코딩 오류:', error);
-              }
+        // 사용자 정보 로드
+        const loadUserInfo = async () => {
+          const { access } = await getTokens();
+          if (access){
+            try{
+              const decoded = jwt_decode(access);
+              setUserInfo(decoded);
+            } catch (error) {
+              console.error('토큰 디코딩 오류:', error);
             }
-          };
-          loadUserInfo();
-      }, [])
+          }
+        };
+        loadUserInfo();
+    }, [])
   );
 
   useEffect(() => {

@@ -11,11 +11,12 @@ import {
   Alert,
 } from "react-native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import jwt_decode from "jwt-decode";
 import { API_BASE_URL } from "../../utils/config";
 import { useFocusEffect } from "@react-navigation/native";
 import { styles as listStyles } from "../../style/RankingStyle";
+import { getTokens } from "../../auth/authStorage";
+import { apiFetch } from "../../auth/api";
 
 // ---------- 유틸 ----------
 const cleanStr = (v) => {
@@ -30,8 +31,10 @@ const pick = (obj, paths, def = undefined) => {
   }
   return def;
 };
+
 // 이메일 형태인지 체크
 const isEmail = (v) => typeof v === 'string' && /.+@.+\..+/.test(v);
+
 // 조회 경로를 상황에 맞게 결정
 const buildUserDetailUrl = (row) => {
   const uid = row.user_pk || row.id || row.user_id; // 우선 PK/ID가 있으면 사용
@@ -62,21 +65,6 @@ const fmtNum = (n) =>
   n === null || n === undefined || isNaN(Number(n))
     ? "-"
     : String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-const fmtDate = (d) => {
-  if (!d) return "-";
-  try {
-    const date = new Date(d);
-    if (!isNaN(date)) {
-      const yyyy = date.getFullYear();
-      const mm = String(date.getMonth() + 1).padStart(2, "0");
-      const dd = String(date.getDate()).padStart(2, "0");
-      return `${yyyy}-${mm}-${dd}`;
-    }
-    return String(d).slice(0, 10);
-  } catch {
-    return String(d).slice(0, 10);
-  }
-};
 
 export default function AdminRankingContent() {
   const [me, setMe] = useState(null);
@@ -88,18 +76,20 @@ export default function AdminRankingContent() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detail, setDetail] = useState(null);
 
+  // 사용자 정보 로드
   useFocusEffect(
-    useCallback(() => {
-      (async () => {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) return;
-        try {
-          const decoded = jwt_decode(token);
-          setMe(decoded);
-        } catch (e) {
-          console.warn("JWT decode 실패:", e);
-        }
-      })();
+      useCallback(() => {
+        (async () => {
+          const { access } = await getTokens();
+          if (access){
+            try{
+              const decoded = jwt_decode(access);
+              setMe(decoded);
+            } catch (error) {
+              console.error('토큰 디코딩 오류:', error);
+            }
+          }
+        })();
     }, [])
   );
 
@@ -159,49 +149,48 @@ export default function AdminRankingContent() {
     setDetailOpen(true);
 
     try {
-    setDetailLoading(true);
-    const token = await AsyncStorage.getItem("auth_token");
-    if (!token) throw new Error("no token");
+      setDetailLoading(true);
+      const { access } = await getTokens();
+      if (!access) throw new Error("no token");
+      
+      const url = buildUserDetailUrl(row);
 
-    const url = buildUserDetailUrl(row);
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
+      const res = await apiFetch(url);
 
-    if (res.ok) {
-      const json = await res.json();
-      // u 추출은 이전에 드린 pick() 로직 재사용
-      const u = (json.result ?? json.data ?? json.user ?? json.payload ?? json);
+      if (res.ok) {
+        const json = await res.json();
+        // u 추출은 이전에 드린 pick() 로직 재사용
+        const u = (json.result ?? json.data ?? json.user ?? json.payload ?? json);
 
-      setDetail((prev) => ({
-        ...prev,
-        phone: (u.phone ?? u.phone_number ?? u.mobile ?? u.tel ?? prev.phone) || "-",
-        address: (u.address ?? u.address_line ?? u.addr ?? u.location ?? prev.address) || "-",
-        reports_count: Number(u.reports_count ?? u.report_count ?? u.total_reports ?? prev.reports_count) || 0,
-        profile_pic_url: (u.avatar_url ?? u.profile_pic_url ?? u.avatar ?? prev.profile_pic_url) || prev.profile_pic_url,
-        nickname: (u.nickname ?? u.name ?? prev.nickname) || prev.nickname,
-      }));
-    } else {
-      const txt = await res.text();
-      console.log('admin/users fetch error:', res.status, txt);
-      if (res.status === 404) {
-        Alert.alert(
-          "사용자 조회 불가",
-          "선택한 항목의 식별자로 사용자를 찾을 수 없습니다.\n(이메일을 ID로 보내고 있을 수 있어요)"
-        );
+        setDetail((prev) => ({
+          ...prev,
+          phone: (u.phone ?? u.phone_number ?? u.mobile ?? u.tel ?? prev.phone) || "-",
+          address: (u.address ?? u.address_line ?? u.addr ?? u.location ?? prev.address) || "-",
+          reports_count: Number(u.reports_count ?? u.report_count ?? u.total_reports ?? prev.reports_count) || 0,
+          profile_pic_url: (u.avatar_url ?? u.profile_pic_url ?? u.avatar ?? prev.profile_pic_url) || prev.profile_pic_url,
+          nickname: (u.nickname ?? u.name ?? prev.nickname) || prev.nickname,
+        }));
       } else {
-        Alert.alert("오류", "사용자 상세를 불러오지 못했습니다.");
+        const txt = await res.text();
+        console.log('admin/users fetch error:', res.status, txt);
+        if (res.status === 404) {
+          Alert.alert(
+            "사용자 조회 불가",
+            "선택한 항목의 식별자로 사용자를 찾을 수 없습니다.\n(이메일을 ID로 보내고 있을 수 있어요)"
+          );
+        } else {
+          Alert.alert("오류", "사용자 상세를 불러오지 못했습니다.");
+        }
       }
+    } catch (e) {
+      console.log('openDetail error:', e);
+      Alert.alert("오류", "사용자 상세 조회 중 문제가 발생했습니다.");
+    } finally {
+      setDetailLoading(false);
     }
-  } catch (e) {
-    console.log('openDetail error:', e);
-    Alert.alert("오류", "사용자 상세 조회 중 문제가 발생했습니다.");
-  } finally {
-    setDetailLoading(false);
-  }
 
-  setDetailOpen(true);
-};
+    setDetailOpen(true);
+  };
 
   const crownColor = (rank) =>
     rank === 1 ? "#FFD700" : rank === 2 ? "#C0C0C0" : rank === 3 ? "#CD7F32" : null;

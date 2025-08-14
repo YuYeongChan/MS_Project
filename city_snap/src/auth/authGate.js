@@ -1,4 +1,3 @@
-// auth/AuthGate.js
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 import { useAuth } from './authProvider';
