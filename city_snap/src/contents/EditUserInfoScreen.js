@@ -37,7 +37,6 @@ const InputField = ({ label, value, onChangeText, placeholder, keyboardType = 'd
   </View>
 );
 
-// --- 메인 화면 컴포넌트 ---
 const EditUserInfoScreen = () => {
   const route = useRoute();
   const navigation = useNavigation();
@@ -52,7 +51,6 @@ const EditUserInfoScreen = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  // 프로필 사진 선택 함수
   const pickProfilePhoto = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -70,7 +68,6 @@ const EditUserInfoScreen = () => {
     }
   };
 
-  //  회원 정보 업데이트
   const handleUpdate = async () => {
     setIsLoading(true);
     const token = await AsyncStorage.getItem('auth_token');
@@ -81,6 +78,7 @@ const EditUserInfoScreen = () => {
     formData.append('address', address);
     formData.append('detail_address', detailAddress);
 
+  
     if (profilePhoto && !profilePhoto.startsWith('http')) {
       const filename = profilePhoto.split('/').pop();
       const match = /\.(\w+)$/.exec(filename);
@@ -121,7 +119,6 @@ const EditUserInfoScreen = () => {
     }
   };
   
-  // 전화번호 자동 하이픈 함수
   const formatPhoneNumber = (text) => {
     let digits = text.replace(/[^0-9]/g, '');
     if (digits.length > 11) digits = digits.substring(0, 11);
@@ -139,14 +136,21 @@ const EditUserInfoScreen = () => {
         <ScrollView contentContainerStyle={styles.container}>
           <Text style={styles.title}>정보 수정</Text>
 
-      {/*  프로필 사진 */}
-      <TouchableOpacity onPress={pickProfilePhoto} style={styles.photoBox}>
-        {profilePhoto ? (
-          <Image source={{ uri: profilePhoto }} style={styles.photo} />
-        ) : (
-          <Text style={styles.addPhotoText}>프로필 사진 추가</Text>
-        )}
-      </TouchableOpacity>
+          {/* [핵심 수정] 프로필 사진 UI 복원 및 최신 디자인 적용 */}
+          <View style={styles.profileContainer}>
+            <TouchableOpacity onPress={pickProfilePhoto}>
+              {profilePhoto ? (
+                <Image source={{ uri: profilePhoto }} style={styles.profileImage} />
+              ) : (
+                <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
+                  <Feather name="user" size={50} color="#fff" />
+                </View>
+              )}
+              <View style={styles.cameraIcon}>
+                <Feather name="camera" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
+          </View>
 
           <InputField
             label="닉네임"
@@ -228,7 +232,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#f4f6f8',
   },
   container: {
-    // [핵심 수정] 타이틀이 잘리지 않도록 상단 여백을 충분히 확보합니다.
     paddingHorizontal: 20,
     paddingBottom: 40,
     paddingTop: 50,
