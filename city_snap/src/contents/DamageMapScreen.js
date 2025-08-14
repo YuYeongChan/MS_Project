@@ -8,10 +8,10 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { WebView } from "react-native-webview";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL, googleMapsApiKey } from "../utils/config";
 import { useNavigation } from "@react-navigation/native";
 import jwt_decode from "jwt-decode";
+import { getTokens } from "../auth/authStorage";
 
 export default function DamageMapScreen() {
   const [damageLocations, setDamageLocations] = useState([]);
@@ -22,13 +22,20 @@ export default function DamageMapScreen() {
   useEffect(() => {
     const loadUserLocationAndDamageData = async () => {
       try {
-        const token = await AsyncStorage.getItem("auth_token");
-        if (!token) {
-          Alert.alert("에러", "로그인이 필요합니다.");
+        // const token = await AsyncStorage.getItem("auth_token");
+        // if (!token) {
+        //   Alert.alert("에러", "로그인이 필요합니다.");
+        //   return;
+        // }
+
+        const { access } = await getTokens();
+
+        if (!access) {
+          Alert.alert("에러", "지도를 불러올 수 없습니다.");
           return;
         }
 
-        const decoded = jwt_decode(token);
+        const decoded = jwt_decode(access);
         const userAddress = decoded.address;
 
         if (!userAddress) {

@@ -23,7 +23,6 @@ function NoticeBoardScreen() {
                 } else {
                     parsed = data;
                 }
-                console.log(parsed);
                 // 공지사항 데이터 설정
                 setNotices(parsed);
                 setLoading(false);

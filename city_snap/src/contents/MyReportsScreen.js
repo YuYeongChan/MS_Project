@@ -5,56 +5,51 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utils/config";
+import { api } from "../auth/api";
+import { useNavigation } from "@react-navigation/native";
+import Ionicons from "react-native-vector-icons/Ionicons"; 
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { Ionicons } from "react-native-vector-icons"; 
 import { useCallback } from "react";
 
 const MyReportsScreen = () => {
-    const [reports, setReports] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [userId, setUserId] = useState(null);
-    const navigation = useNavigation();
+  const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigation = useNavigation();
 
-    useFocusEffect(
-        useCallback(() => {
-            const getUserAndFetchReports = async () => {
-                setLoading(true);
-                try {
-                    const token = await AsyncStorage.getItem("auth_token");
-                    if (!token) {
-                        Alert.alert("로그인 필요", "로그인이 필요한 서비스입니다.");
-                        setLoading(false);
-                        return;
-                    }
+  useEffect(() => {
+    loadUserInfo();
+  }, []);
 
-                    const meResponse = await fetch(`${API_BASE_URL}/me`, {
-                        headers: { Authorization: `Bearer ${token}` },
-                    });
-                    const meData = await meResponse.json();
+  const loadUserInfo = async () => {
+    try {
+      const data = await api.get("/me");
+      if (data?.user_id) {
+        await fetchReports(data.user_id);
+      } else {
+        Alert.alert("유저 정보 오류", "사용자 정보를 가져올 수 없습니다.");
+        setLoading(false);
+      }
+    } catch (error) {
+      Alert.alert("오류", "사용자 정보를 가져오는 데 실패했습니다.");
+      setLoading(false);
+    }
+  };
 
-                    if (meResponse.ok && meData.user_id) {
-                        setUserId(meData.user_id);
-                        const reportsResponse = await fetch(`${API_BASE_URL}/my_reports?user_id=${meData.user_id}`);
-                        const reportsData = await reportsResponse.json();
-
-                        if (reportsResponse.ok && reportsData.reports) {
-                            setReports(reportsData.reports);
-                        } else {
-                            Alert.alert("오류", reportsData.error || "신고 내역을 불러올 수 없습니다.");
-                        }
-                    } else {
-                        Alert.alert("유저 정보 오류", meData.error || "사용자 정보를 가져올 수 없습니다.");
-                    }
-                } catch (error) {
-                    Alert.alert("오류", "데이터를 가져오는 중 오류가 발생했습니다.");
-                } finally {
-                    setLoading(false);
-                }
-            };
-
-            getUserAndFetchReports();
-        }, [])
-    );
+  const fetchReports = async (uid) => {
+    try {
+      const data = await api.get(`/my_reports?user_id=${encodeURIComponent(uid)}`);
+      if (data?.reports) {
+        setReports(data.reports);
+      } else {
+        Alert.alert("오류", "신고 내역을 불러올 수 없습니다.");
+      }
+    } catch (error) {
+      Alert.alert("네트워크 오류", "서버와의 연결에 실패했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
     const handleDelete = async (reportId) => {
         Alert.alert(

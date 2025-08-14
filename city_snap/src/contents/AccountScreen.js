@@ -11,62 +11,49 @@ import {
     Platform,
     ActivityIndicator,
 } from "react-native";
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../utils/config';
 import jwt_decode from "jwt-decode";
+import { signIn } from "../auth/authApi";
+import { useAuth } from "../auth/authProvider";
 
 const AccountScreen = ({ navigation }) => {
-    const [userId, setUserId] = useState("");
-    const [password, setPassword] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-    const handleLogin = async () => {
-        if (!userId.trim()) {
-            Alert.alert("알림", "사용자 ID를 입력해주세요.");
-            return;
-        }
-        if (!password.trim()) {
-            Alert.alert("알림", "비밀번호를 입력해주세요.");
-            return;
-        }
+  const { completeSignIn } = useAuth();
 
-        setIsLoading(true);
+  const handleLogin = async () => {
+    if (!userId.trim()) {
+      Alert.alert("알림", "사용자 ID를 입력해주세요.");
+      return;
+    }
+    if (!password.trim()) {
+      Alert.alert("알림", "비밀번호를 입력해주세요.");
+      return;
+    }
 
-        const formData = new FormData();
-        formData.append('user_id', userId);
-        formData.append('password', password);
+    setIsLoading(true);
+    try {
+      // FormData 방식으로 서버에 로그인 요청 + 토큰 저장(SecureStore)
+      const res = await signIn({ user_id: userId, password: password});
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/account.sign.in`, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json' },
-                body: formData,
-            });
+      const access = res.token;
+      const refresh = res.refreshToken;
+      if (!access) throw new Error("로그인 실패: 토큰이 없습니다.");
 
-            const responseData = await response.json();
+      await completeSignIn({ access, refresh });
 
-            if (response.ok) {
-                await AsyncStorage.setItem('auth_token', responseData.token);
-                await AsyncStorage.setItem('user_id', userId);
-
-                const decoded = jwt_decode(responseData.token);
-                console.log("Decoded JWT:", decoded);
-
-                if (decoded.role === "admin") {
-                    navigation.replace('AdminMainScreen');
-                } else {
-                    navigation.replace('UserTabNavigator');
-                }
-            } else {
-                Alert.alert("로그인 실패", responseData.error || responseData.result || "사용자 ID 또는 비밀번호가 올바르지 않습니다.");
-            }
-        } catch (error) {
-            console.error("네트워크 요청 실패:", error);
-            Alert.alert("오류", "서버와 통신하는 중 오류가 발생했습니다. 네트워크 연결을 확인해주세요.");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      Alert.alert("로그인 성공", res.result || "로그인에 성공했습니다!");
+    } catch (e) {
+      console.error("로그인 실패:", e);
+      Alert.alert(
+        "로그인 실패",
+        String(e?.message || "사용자 ID 또는 비밀번호가 올바르지 않습니다.")
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
     return (
         <SafeAreaView style={styles.safeArea}>

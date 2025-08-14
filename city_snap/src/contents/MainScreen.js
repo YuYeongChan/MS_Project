@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, ScrollView, Image } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import { main_styles } from "../style/MainStyle";
-import NoticeBoardScreen from "./NoticeBoardScreen";
 
 function MainScreen() {
     const navigation = useNavigation();

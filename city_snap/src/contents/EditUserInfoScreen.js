@@ -14,11 +14,12 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { API_BASE_URL } from '../utils/config';
 import Postcode from '@actbase/react-daum-postcode';
 import * as ImagePicker from 'expo-image-picker';
+import { apiFetch } from '../auth/api';
+import { getTokens, saveTokens } from '../auth/authStorage';
 import { Feather } from '@expo/vector-icons';
 
 // --- 재사용 가능한 입력 필드 컴포넌트 ---
@@ -70,47 +71,41 @@ const EditUserInfoScreen = () => {
 
   const handleUpdate = async () => {
     setIsLoading(true);
-    const token = await AsyncStorage.getItem('auth_token');
-    const formData = new FormData();
-
-    formData.append('nickname', nickname);
-    formData.append('phone_number', phoneNumber);
-    formData.append('address', address);
-    formData.append('detail_address', detailAddress);
-
-  
-    if (profilePhoto && !profilePhoto.startsWith('http')) {
-      const filename = profilePhoto.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const type = match ? `image/${match[1]}` : `image`;
-      formData.append('profile_pic', {
-        uri: Platform.OS === 'android' ? profilePhoto : profilePhoto.replace('file://', ''),
-        name: filename,
-        type,
-      });
-    }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/update_user_info`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
+      const formData = new FormData();
+      formData.append('nickname', nickname);
+      formData.append('phone_number', phoneNumber);
+      formData.append('address', address + ' ' + detailAddress);
+      formData.append('detail_address', detailAddress);
 
-      const result = await response.json();
-
-      if (response.ok) {
-        if (result.token) {
-          await AsyncStorage.setItem('auth_token', result.token);
-        }
-        Alert.alert('수정 완료', '회원 정보가 수정되었습니다.', [
-          { text: '확인', onPress: () => navigation.goBack() },
-        ]);
-      } else {
-        Alert.alert('수정 실패', result.message || '오류가 발생했습니다.');
+      if (profilePhoto && !profilePhoto.startsWith('http')) {
+        const filename = profilePhoto.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = match ? `image/${match[1]}` : `image`;
+        formData.append('profile_pic', {
+          uri: Platform.OS === 'android' ? profilePhoto : profilePhoto.replace('file://', ''),
+          name: filename,
+          type,
+        });
       }
+
+      console.log(formData);
+      
+      // Authorization 헤더 필요 없음 (apiFetch가 자동 첨부)
+      const res = await apiFetch('/update_user_info', { method: 'PATCH', body: formData });
+      const result = await res.json();
+
+      // 서버가 새 access token을 돌려주는 경우 반영
+      if (result?.token) {
+        const { refresh } = await getTokens(); // 기존 refresh 유지
+        await saveTokens({ access: result.token, refresh });
+      }
+
+      Alert.alert('수정 완료', '회원 정보가 수정되었습니다.', [
+        { text: '확인', onPress: () => navigation.goBack() },
+      ]);
+
     } catch (error) {
       console.error('수정 오류:', error);
       Alert.alert('오류', '서버와의 연결에 실패했습니다.');
