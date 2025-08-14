@@ -139,12 +139,12 @@ const MyReportsScreen = () => {
                 </Text>
   
                 <View style={styles.bottomRow}>
+                   <Text style={styles.status}>
+                    상태: {item.repair_status === 1 ? "수리 완료" : "수리 대기"}
+                  </Text>
                   <TouchableOpacity onPress={() => handleDelete(item.report_id)}>
                     <Text style={styles.deleteText}>삭제</Text>
                   </TouchableOpacity>
-                  <Text style={styles.status}>
-                    상태: {item.repair_status === 1 ? "수리 완료" : "수리 대기"}
-                  </Text>
                 </View>
               </View>
             </View>
@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   deleteText: {
-    marginTop: 8,
+    marginTop: 0,
     fontSize: 13,
     color: "#E53935",
     fontWeight: "bold",

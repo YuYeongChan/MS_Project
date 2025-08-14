@@ -139,10 +139,7 @@ const SignUpScreen = ({ navigation }) => {
       const filename = profilePhoto.split("/").pop();
       const fileType = `image/${filename.split(".").pop()}`;
       formData.append("profile_pic", {
-        uri:
-          Platform.OS === "android"
-            ? profilePhoto
-            : profilePhoto.replace("file://", ""),
+        uri: Platform.OS === "android" ? profilePhoto : profilePhoto.replace("file://", ""),
         name: filename,
         type: fileType,
       });
@@ -152,42 +149,40 @@ const SignUpScreen = ({ navigation }) => {
     formData.append("phone_number", phoneNumber);
     formData.append("resident_id_number", residentIdNumber);
 
-    const fullAddress = detailAddress
-      ? `${address}, ${detailAddress}`
-      : address;
+    const fullAddress = detailAddress ? `${address}, ${detailAddress}` : address;
     formData.append("address", fullAddress);
 
     try {
       const response = await fetch(`${API_BASE_URL}/account.sign.up`, {
-    method: "POST",
-    body: formData,
-  });
+        method: "POST",
+        body: formData,
+      });
 
-  const rawText = await response.text(); //  JSON 파싱 전에 텍스트로 응답 확인
-  console.log(" Raw response:", rawText);
+      const rawText = await response.text();
+      console.log(" Raw response:", rawText);
 
-  let responseData;
-  try {
-    responseData = JSON.parse(rawText); //  JSON 파싱 시도
-  } catch (jsonError) {
-    console.warn(" JSON 파싱 실패:", jsonError.message);
-    Alert.alert("서버 응답 오류", "회원가입은 되었지만 서버 응답 처리에 실패했습니다.");
-    setIsLoading(false);
-    return;
-  }
+      let responseData;
+      try {
+        responseData = JSON.parse(rawText);
+      } catch (jsonError) {
+        console.warn(" JSON 파싱 실패:", jsonError.message);
+        Alert.alert("서버 응답 오류", "회원가입은 되었지만 서버 응답 처리에 실패했습니다.");
+        setIsLoading(false);
+        return;
+      }
 
-  if (response.ok) {
-    Alert.alert("회원가입 성공", responseData.result || "회원가입 완료!");
-    navigation.goBack();
-  } else {
-    Alert.alert("회원가입 실패", responseData.error || "다시 시도해주세요.");
-  }
-} catch (error) {
-  console.error(" 네트워크 에러:", error.message);
-  Alert.alert("네트워크 오류", "서버와 통신할 수 없습니다.");
-} finally {
-  setIsLoading(false);
-}
+      if (response.ok) {
+        Alert.alert("회원가입 성공", responseData.result || "회원가입 완료!");
+        navigation.goBack();
+      } else {
+        Alert.alert("회원가입 실패", responseData.error || "다시 시도해주세요.");
+      }
+    } catch (error) {
+      console.error(" 네트워크 에러:", error.message);
+      Alert.alert("네트워크 오류", "서버와 통신할 수 없습니다.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -274,10 +269,7 @@ const SignUpScreen = ({ navigation }) => {
           placeholder="전화번호 (010-1234-5678)"
           value={phoneNumber}
           onChangeText={(text) => {
-            // 숫자만 추출
             let cleaned = text.replace(/[^0-9]/g, "");
-
-            // 패턴 적용: 010-1234-5678
             if (cleaned.length < 4) {
               cleaned = cleaned;
             } else if (cleaned.length < 8) {
@@ -285,17 +277,16 @@ const SignUpScreen = ({ navigation }) => {
             } else {
               cleaned = cleaned.replace(/(\d{3})(\d{4})(\d{0,4})/, "$1-$2-$3");
             }
-
             setPhoneNumber(cleaned);
           }}
           keyboardType="phone-pad"
           maxLength={13}
-      />
+        />
 
         {/* 주소 검색 */}
-        <View style={{ flexDirection: "row", alignItems: "center", width: "100%" }}>
+        <View style={signUpStyles.inputWithButtonContainer}>
           <TextInput
-            style={[signUpStyles.input, { flex: 1 }]}
+            style={[signUpStyles.input, signUpStyles.inputWithButton]}
             placeholder="주소 검색"
             value={address}
             editable={false}
@@ -322,16 +313,12 @@ const SignUpScreen = ({ navigation }) => {
           placeholder="주민등록번호 (123456-1234567)"
           value={residentIdNumber}
           onChangeText={(text) => {
-            // 숫자만 추출
             let cleaned = text.replace(/[^0-9]/g, "");
-
-            // 패턴 적용: 123456-1234567
             if (cleaned.length < 7) {
               cleaned = cleaned;
             } else {
               cleaned = cleaned.replace(/(\d{6})(\d{0,7})/, "$1-$2");
             }
-
             setResidentIdNumber(cleaned);
           }}
           keyboardType="numeric"
@@ -372,7 +359,7 @@ const signUpStyles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingVertical: 30,
-    backgroundColor: "#436D9D", // 로그인과 동일하게
+    backgroundColor: "#436D9D",
   },
   container: {
     justifyContent: "center",
@@ -394,12 +381,13 @@ const signUpStyles = StyleSheet.create({
     fontSize: 16,
     color: "#333",
     fontFamily: "PretendardGOV-Bold",
+    minHeight: 52,               
   },
   inputWithButtonContainer: {
     flexDirection: "row",
     width: "100%",
     marginBottom: 15,
-    alignItems: "center",
+    alignItems: "stretch",       
   },
   inputWithButton: {
     flex: 1,
@@ -407,8 +395,10 @@ const signUpStyles = StyleSheet.create({
     marginBottom: 0,
   },
   checkButton: {
-    backgroundColor: "#6f8cadff", // 로그인 버튼 색
-    padding: 15,
+    backgroundColor: "#6f8cadff",
+    height: 52,                  
+    paddingHorizontal: 16,
+    paddingVertical: 0,
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
@@ -446,7 +436,7 @@ const signUpStyles = StyleSheet.create({
   },
   signupButton: {
     width: "100%",
-    backgroundColor: "#6f8cadff", // 로그인 버튼 색
+    backgroundColor: "#6f8cadff",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
