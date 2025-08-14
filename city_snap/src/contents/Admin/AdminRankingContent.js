@@ -23,14 +23,6 @@ const cleanStr = (v) => {
   if (v === null || v === undefined) return "";
   return String(v).replace(/[\t\r\n]/g, "").replace(/^"+|"+$/g, "").trim();
 };
-// 가장 먼저 존재하는 값을 집어오는 헬퍼 (중첩 지원)
-const pick = (obj, paths, def = undefined) => {
-  for (const p of paths) {
-    const val = p.split('.').reduce((o, k) => (o && o[k] !== undefined ? o[k] : undefined), obj);
-    if (val !== undefined && val !== null && val !== '') return val;
-  }
-  return def;
-};
 
 // 이메일 형태인지 체크
 const isEmail = (v) => typeof v === 'string' && /.+@.+\..+/.test(v);
