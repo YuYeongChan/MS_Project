@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../auth/authProvider';
 
 export default function AdminTopBar() {
-    const navigation = useNavigation();
+
+    const { signOut } = useAuth(); 
 
     const handleLogout = async () => {
         Alert.alert(
@@ -16,9 +16,8 @@ export default function AdminTopBar() {
                 {
                     text: "확인",
                     onPress: async () => {
-                        await AsyncStorage.multiRemove(["auth_token", "user_id"]);
+                        await signOut();
                         Alert.alert("로그아웃", "로그아웃되었습니다.");
-                        navigation.replace("AccountScreen");
                     },
                 },
             ]

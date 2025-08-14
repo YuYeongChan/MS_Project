@@ -20,7 +20,7 @@ export const main_styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        color: "#436D9D",
+        color: "#2c3e50",
         marginBottom: 15,
         fontFamily: 'PretendardGOV-Bold',
     },

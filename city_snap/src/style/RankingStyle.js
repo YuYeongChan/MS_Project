@@ -8,7 +8,7 @@ export const styles = StyleSheet.create({
   title: {
     fontSize: 25,
     fontFamily: 'PretendardGOV-Bold',
-    color: '#436D9D',
+    color: '#2c3e50',
     textAlign: 'center',
     marginBottom: 16,
   },
