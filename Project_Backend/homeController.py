@@ -25,7 +25,6 @@ aDAO = AccountDAO()
 rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
-regDAO = RegistrationDAO()
 
 # JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
@@ -415,7 +414,7 @@ def create_notice(
     #신고한 유저가 자기가 신고한 목록 보기위해 필요한거
 @app.get("/my_reports")
 async def my_reports(user_id: str = Query(..., description="조회할 사용자 ID")):
-    return regDAO.getUserReports(user_id)
+    return rDAO.getUserReports(user_id)
 
     #유저 신고한 내역 확인할때 유저 정보 확인
 @app.get("/me")
