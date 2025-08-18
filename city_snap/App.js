@@ -119,8 +119,7 @@ function UserAppStack() {
 function AdminAppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName="AdminMainScreen">
-      <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
-      <Stack.Screen name="AdminLayout" component={AdminLayout} />
+      <Stack.Screen name="AdminMainScreen" component={AdminLayout} />
     </Stack.Navigator>
   );
 }
