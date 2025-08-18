@@ -217,10 +217,8 @@ const PublicPropertyReportScreen = () => {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
-      setIsRecording(true);
     } catch (err) {
       Alert.alert("오류", "음성 녹음 시작에 실패했습니다.");
-      setIsRecording(false);
     }
   };
 
@@ -229,7 +227,7 @@ const PublicPropertyReportScreen = () => {
       setVoiceState("processing");
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      setAudioUri(uri);
+    
 
       const formData = new FormData();
       formData.append("file", { uri, name: "recording.m4a", type: "audio/m4a" });

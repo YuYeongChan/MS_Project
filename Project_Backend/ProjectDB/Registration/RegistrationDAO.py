@@ -1,3 +1,5 @@
+from __future__ import annotations
+import typing as t
 import os
 from datetime import datetime
 import oracledb  # python-oracledb
@@ -479,3 +481,47 @@ class RegistrationDAO:
             return JSONResponse({'error': f"DB 오류: {e}"}, status_code=500, headers=h)
         finally:
             if cur and con: SsyDBManager.closeConCur(con, cur)
+
+    # 4. 신고 상태 업데이트 (ai_status만 변경)
+    def updateAIStatus(self, report_id: int, status: str):
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            cur.execute(
+                "UPDATE Reports SET ai_status=:st WHERE report_id=:rid",
+                {"st": status, "rid": report_id}
+            )
+            con.commit()
+        except Exception as e:
+            if con: con.rollback()
+            print("updateAIStatus error:", e)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)
+
+    # 5. AI 결과 업데이트
+    def updateAIResults(self, report_id: int, ai_status: str,
+                        caption_en: t.Optional[str], caption_ko: t.Optional[str],
+                        mask_url: t.Optional[str]) -> None:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            cur.execute("""
+                UPDATE Reports
+                   SET ai_status = :st,
+                       caption_en = :cen,
+                       caption_ko = :cko,
+                       mask_url   = :murl
+                 WHERE report_id = :rid
+            """, {
+                "st": ai_status,
+                "cen": caption_en,
+                "cko": caption_ko,
+                "murl": mask_url,
+                "rid": report_id
+            })
+            con.commit()
+        except Exception as e:
+            if con: con.rollback()
+            print("updateAIResults error:", e)
+        finally:
+            if cur: SsyDBManager.closeConCur(con, cur)

@@ -35,8 +35,7 @@
     "react-native-screens": "^4.13.1",
     "react-native-webview": "13.13.5",
     "tslib": "^2.8.1",
-    "expo-build-properties": "~0.14.8",
-    "expo-secure-store": "~14.2.3"
+    "expo-location": "~18.1.6"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
