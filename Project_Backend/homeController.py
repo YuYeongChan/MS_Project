@@ -1,10 +1,11 @@
 import sys
 import os
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File, APIRouter, Query # APIRouter 임포트 유지
+from fastapi import FastAPI, Form, UploadFile, HTTPException, File, BackgroundTasks, Request, APIRouter, Query # APIRouter 임포트 유지
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from ProjectDB.Notice.noticeDAO import NoticeDAO
+from ProjectDB.imageAI.imageAiDAO import ImageAiDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles
@@ -26,6 +27,11 @@ rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
 regDAO = RegistrationDAO()
+aiDAO = ImageAiDAO()
+
+# ai 서버 url
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "http://128.24.59.107:8000")
+ai_service = ImageAiDAO(ai_base_url=AI_BASE_URL)  # (참고) 현재 이 인스턴스는 사용 안 함
 
 # JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
@@ -83,7 +89,14 @@ from ai.whisper_gpt.whisper_gpt import process_audio_and_get_structured_data
 app = FastAPI()
 router = APIRouter()
 
+BASE_DIR = os.path.dirname(__file__)
+INPUT_DIR = os.path.join(BASE_DIR, "input_images")
+MASK_DIR  = os.path.join(BASE_DIR, "mask_images")
+os.makedirs(INPUT_DIR, exist_ok=True)
+os.makedirs(MASK_DIR,  exist_ok=True)
 
+app.mount("/input_images", StaticFiles(directory=INPUT_DIR), name="input_images")
+app.mount("/mask_images",  StaticFiles(directory=MASK_DIR),  name="mask_images")
 
 
 # "/profile_photos" 경로로 해당 폴더를 정적 파일 제공
@@ -187,9 +200,28 @@ async def registrationWrite(
     user_id: str = Form(...),
     details: str = Form(...),
     report_date: str = Form(...),
-    is_normal: int = Form(0)  # ← 0/1 로 받기
+    is_normal: int = Form(0),  # ← 0/1 로 받기
+    request: Request = None,
+    background_tasks: BackgroundTasks = None
 ):
-    return await rDAO.registerFacility(photo, location_description, latitude, longitude, user_id, details, report_date)
+    # 1) 기존 신고 저장
+    resp = await rDAO.registerFacility(photo, location_description, latitude, longitude, user_id, details, report_date)
+
+    # 2) report_id, 원본 파일명 -> 공개 url 조립
+    try:
+        payload = json.loads(resp.body)
+        report_id = int(payload.get("report_id"))
+        photo_filename = payload.get("photo_url")  # 프로젝트 키에 맞춰 조정
+        base = str(request.base_url).rstrip("/")
+        input_image_url = f"{base}/registration_photos/{photo_filename}"  # 정적 마운트 기준
+
+        # 3) 백그라운드 실행 (클래스 메소드 호출)
+        if background_tasks:
+            background_tasks.add_task(aiDAO.process_report, report_id, input_image_url)
+    except Exception as e:
+        print("BG schedule error:", e)
+
+    return resp
 
 # 신고 목록 조회 API 엔드포인트
 @app.get("/registration.list")
@@ -564,3 +596,12 @@ def auth_refresh(body: RefreshIn):
 
     # (선택) refresh rotation: 새 refresh도 함께 내려주고, 이전 refresh를 폐기(블랙리스트/DB저장)하는 설계 권장
     return {"accessToken": new_access}
+
+
+@app.get("/management.reports")
+async def management_reports():
+    return msDAO.getAllDamageReportLocations()  # 또는 WithLatestStatus 버전
+
+@app.get("/management.report/{report_id}")
+async def management_report_detail(report_id: int):
+    return msDAO.getReportDetail(report_id)

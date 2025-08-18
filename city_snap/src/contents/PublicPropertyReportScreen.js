@@ -137,7 +137,6 @@ const PublicPropertyReportScreen = () => {
         );
         setPhoto(null);
         setDetail("");
-        setAudioUri(null);
         setDate(null);
         setLocation(null);
         setVisible(false);
@@ -176,10 +175,8 @@ const PublicPropertyReportScreen = () => {
       );
 
       setRecording(recording);
-      setIsRecording(true);
     } catch (err) {
       Alert.alert("오류", "음성 녹음 시작에 실패했습니다.");
-      setIsRecording(false);
     }
   };
 
@@ -190,7 +187,6 @@ const PublicPropertyReportScreen = () => {
 
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      setAudioUri(uri);
       console.log(" 서버에 업로드 요청 시작");
 
       const formData = new FormData();
