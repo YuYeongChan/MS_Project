@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../../utils/config';
 
 const ImageCarousel = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
-    const imageWidth = Dimensions.get('window').width * 0.9 - 40; 
+    const imageWidth = Dimensions.get('window').width * 0.9 - 40;
 
     const handleScroll = (event) => {
         const scrollPosition = event.nativeEvent.contentOffset.x;
@@ -36,7 +36,6 @@ const ImageCarousel = ({ images }) => {
         </View>
     );
 };
-// ------------------------------------------
 
 export default function AdminReportListScreen() {
     const [reports, setReports] = useState([]);
@@ -44,7 +43,6 @@ export default function AdminReportListScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [selectedReport, setSelectedReport] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
-
     const [damageStatusInModal, setDamageStatusInModal] = useState(null);
     const [repairStatusInModal, setRepairStatusInModal] = useState(null);
 
@@ -78,7 +76,7 @@ export default function AdminReportListScreen() {
 
     const handleStatusUpdate = async () => {
         if (selectedReport === null) return;
-        
+
         const formData = new FormData();
         formData.append('is_normal', damageStatusInModal);
         formData.append('repair_status', repairStatusInModal);
@@ -92,8 +90,8 @@ export default function AdminReportListScreen() {
             if (response.ok) {
                 Alert.alert("성공", "상태가 업데이트되었습니다.");
                 setModalVisible(false);
-                fetchAllReports(); // 목록 새로고침
-                
+                fetchAllReports(); 
+
                 appEvents.emit(EVENTS.REPORT_STATUS_UPDATED, {
                     reportId: selectedReport.report_id,
                     repairStatus: repairStatusInModal,
@@ -112,31 +110,49 @@ export default function AdminReportListScreen() {
         return <ActivityIndicator size="large" color="#436D9D" style={styles.loadingIndicator} />;
     }
 
+    let lastRenderedDate = null;
+
     return (
         <View style={styles.container}>
             <Text style={styles.title}>전체 신고 내역 관리</Text>
-            
+
             <ScrollView>
-                {reports.map(report => (
-                    <TouchableOpacity key={report.id} style={styles.card} onPress={() => openDetailModal(report)}>
-                        <Image
-                            source={{ uri: report.photo_url ? `${API_BASE_URL}/registration_photos/${report.photo_url}` : 'https://placehold.co/80x80/eeeeee/cccccc?text=No+Image' }}
-                            style={styles.image}
-                        />
-                        <View style={styles.info}>
-                            <Text style={styles.cardTitle} numberOfLines={1}>{report.location}</Text>
-                            <Text style={styles.cardDate}>{report.date} / 신고자: {report.user_id}</Text>
-                            <View style={styles.statusTags}>
-                                <Text style={[styles.tag, report.is_normal === 1 ? styles.tagNormal : styles.tagDamage]}>
-                                    {report.is_normal === 1 ? '정상' : '파손'}
-                                </Text>
-                                <Text style={[styles.tag, report.repair_status === 1 ? styles.tagCompleted : styles.tagPending]}>
-                                    {report.repair_status === 1 ? '수리 완료' : '수리 대기'}
-                                </Text>
-                            </View>
-                        </View>
-                    </TouchableOpacity>
-                ))}
+                {reports.map(report => {
+                    const showDateSeparator = report.date !== lastRenderedDate;
+                    if (showDateSeparator) {
+                        lastRenderedDate = report.date;
+                    }
+
+                    return (
+                        <React.Fragment key={report.id}>
+                            {showDateSeparator && (
+                                <View style={styles.dateSeparator}>
+                                    <View style={styles.separatorLine} />
+                                    <Text style={styles.separatorText}>{report.date}</Text>
+                                    <View style={styles.separatorLine} />
+                                </View>
+                            )}
+                            <TouchableOpacity style={styles.card} onPress={() => openDetailModal(report)}>
+                                <Image
+                                    source={{ uri: report.photo_url ? `${API_BASE_URL}/registration_photos/${report.photo_url}` : 'https://placehold.co/80x80/eeeeee/cccccc?text=No+Image' }}
+                                    style={styles.image}
+                                />
+                                <View style={styles.info}>
+                                    <Text style={styles.cardTitle} numberOfLines={1}>{report.location}</Text>
+                                    <Text style={styles.cardDate}>{report.date} / 신고자: {report.user_id}</Text>
+                                    <View style={styles.statusTags}>
+                                        <Text style={[styles.tag, report.is_normal === 1 ? styles.tagNormal : styles.tagDamage]}>
+                                            {report.is_normal === 1 ? '정상' : '파손'}
+                                        </Text>
+                                        <Text style={[styles.tag, report.repair_status === 1 ? styles.tagCompleted : styles.tagPending]}>
+                                            {report.repair_status === 1 ? '수리 완료' : '수리 대기'}
+                                        </Text>
+                                    </View>
+                                </View>
+                            </TouchableOpacity>
+                        </React.Fragment>
+                    );
+                })}
             </ScrollView>
 
             <Modal visible={modalVisible} transparent animationType="fade" onRequestClose={() => setModalVisible(false)}>
@@ -151,7 +167,7 @@ export default function AdminReportListScreen() {
                                     {(() => {
                                         const images = [];
                                         if (selectedReport.photo_url) images.push({ uri: `${API_BASE_URL}/registration_photos/${selectedReport.photo_url}`, label: '원본' });
-                                        
+
 
                                         if (images.length > 1) {
                                             return <ImageCarousel images={images} />;
@@ -165,15 +181,15 @@ export default function AdminReportListScreen() {
                                 </ScrollView>
 
                                 <View style={styles.statusUpdateSection}>
-                                    <Text style={styles.sectionTitle}>파손 여부 (AI 판독: {selectedReport.is_normal === 1 ? '정상' : '파손'})</Text>
+                                    <Text style={styles.sectionTitle}>파손 여부</Text>
                                     <View style={styles.buttonGroup}>
-                                        <TouchableOpacity 
-                                            style={[styles.statusButton, damageStatusInModal === 1 && styles.statusButtonActive]} 
+                                        <TouchableOpacity
+                                            style={[styles.statusButton, damageStatusInModal === 1 && styles.statusButtonActive]}
                                             onPress={() => setDamageStatusInModal(1)}>
                                             <Text style={[styles.statusButtonText, damageStatusInModal === 1 && styles.statusButtonTextActive]}>정상</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity 
-                                            style={[styles.statusButton, damageStatusInModal === 0 && styles.statusButtonActive]} 
+                                        <TouchableOpacity
+                                            style={[styles.statusButton, damageStatusInModal === 0 && styles.statusButtonActive]}
                                             onPress={() => setDamageStatusInModal(0)}>
                                             <Text style={[styles.statusButtonText, damageStatusInModal === 0 && styles.statusButtonTextActive]}>파손</Text>
                                         </TouchableOpacity>
@@ -183,19 +199,19 @@ export default function AdminReportListScreen() {
                                 <View style={styles.statusUpdateSection}>
                                     <Text style={styles.sectionTitle}>수리 상태</Text>
                                     <View style={styles.buttonGroup}>
-                                        <TouchableOpacity 
-                                            style={[styles.statusButton, repairStatusInModal === 0 && styles.statusButtonActive]} 
+                                        <TouchableOpacity
+                                            style={[styles.statusButton, repairStatusInModal === 0 && styles.statusButtonActive]}
                                             onPress={() => setRepairStatusInModal(0)}>
                                             <Text style={[styles.statusButtonText, repairStatusInModal === 0 && styles.statusButtonTextActive]}>수리 대기</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity 
-                                            style={[styles.statusButton, repairStatusInModal === 1 && styles.statusButtonActive]} 
+                                        <TouchableOpacity
+                                            style={[styles.statusButton, repairStatusInModal === 1 && styles.statusButtonActive]}
                                             onPress={() => setRepairStatusInModal(1)}>
                                             <Text style={[styles.statusButtonText, repairStatusInModal === 1 && styles.statusButtonTextActive]}>수리 완료</Text>
                                         </TouchableOpacity>
                                     </View>
                                 </View>
-                                
+
                                 <View style={styles.modalActions}>
                                     <TouchableOpacity style={styles.closeButton} onPress={() => setModalVisible(false)}>
                                         <Text style={styles.buttonText}>닫기</Text>
@@ -228,6 +244,9 @@ const styles = StyleSheet.create({
     tagNormal: { backgroundColor: '#e0f0e0', color: '#008000' },
     tagPending: { backgroundColor: '#fff0c7', color: '#f5a623' },
     tagCompleted: { backgroundColor: '#d4e4ff', color: '#436D9D' },
+    dateSeparator: { flexDirection: 'row', alignItems: 'center', marginVertical: 15,},
+    separatorLine: { flex: 1, height: 3, backgroundColor: '#436D9D'},
+    separatorText: { paddingHorizontal: 12, fontSize: 17, fontWeight: '600', color: '#436D9D'},
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
     modalContent: { width: '90%', backgroundColor: '#fff', borderRadius: 10, padding: 20, maxHeight: '85%' },
     modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15 },

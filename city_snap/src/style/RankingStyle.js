@@ -10,6 +10,7 @@ export const styles = StyleSheet.create({
     fontFamily: 'PretendardGOV-Bold',
     color: '#2c3e50',
     textAlign: 'center',
+    paddingTop:15,
     marginBottom: 16,
   },
   item: {

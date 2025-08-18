@@ -129,6 +129,9 @@ const EditUserInfoScreen = () => {
         style={{ flex: 1 }}
       >
         <ScrollView contentContainerStyle={styles.container}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+              <Feather name="chevron-left" size={28} color="#2c3e50" />
+          </TouchableOpacity>
           <Text style={styles.title}>정보 수정</Text>
 
           {/* [핵심 수정] 프로필 사진 UI 복원 및 최신 디자인 적용 */}
@@ -233,12 +236,20 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   title: {
+    paddingTop:20,
     fontSize: 26,
     fontWeight: '700',
     color: '#2c3e50',
     marginBottom: 30,
     textAlign: 'center',
   },
+  backButton: {
+    position: 'absolute',
+    top: 50, 
+    left: 10,
+    zIndex: 10,
+    padding: 10,
+},
   profileContainer: {
     alignItems: 'center',
     marginBottom: 30,

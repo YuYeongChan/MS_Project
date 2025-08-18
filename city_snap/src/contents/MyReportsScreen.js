@@ -5,8 +5,10 @@ import {
 } from "react-native";
 import { API_BASE_URL } from "../utils/config";
 import { api } from "../auth/api";
-import { useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import Ionicons from "react-native-vector-icons/Ionicons"; 
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
+// import { Ionicons } from "react-native-vector-icons"; 
+import { useCallback } from "react";
 
 const MyReportsScreen = () => {
   const [reports, setReports] = useState([]);

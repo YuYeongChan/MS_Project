@@ -239,7 +239,7 @@ export default function AdminRankingContent() {
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F9F9F9" }}>
-      <Text style={listStyles.title}>전국 등록왕 순위 (관리자)</Text>
+      <Text style={listStyles.title}>전국 등록왕 순위</Text>
 
       {loading ? (
         <View style={{ flex: 1, justifyContent: "center" }}>

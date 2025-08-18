@@ -193,7 +193,6 @@ const PublicPropertyReportScreen = () => {
         );
         setPhoto(null);
         setDetail("");
-        setAudioUri(null);
         setDate(null);
         setLocation(null);
         setVisible(false);
