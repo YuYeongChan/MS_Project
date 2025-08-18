@@ -42,7 +42,6 @@ const PublicPropertyReportScreen = () => {
   // Voice
   const [recording, setRecording] = useState(null);
   const [voiceState, setVoiceState] = useState("idle");
-  const [audioUri, setAudioUri] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
 
   // GPS
@@ -242,7 +241,6 @@ const PublicPropertyReportScreen = () => {
 
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      setAudioUri(uri);
       console.log(" 서버에 업로드 요청 시작");
 
       const formData = new FormData();

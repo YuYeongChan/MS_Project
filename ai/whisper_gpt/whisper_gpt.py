@@ -16,7 +16,7 @@ model = whisper.load_model("base")
 
 # Azure OpenAI 클라이언트 설정
 client = AzureOpenAI(
-            azure_endpoint="https://team01-05-4067-resource.openai.azure.com/",         
+            azure_endpoint="https://team01-05-4067-resource.openai.azure.com/",    
             api_version="2024-12-01-preview", 
 )
 
@@ -67,9 +67,7 @@ def process_audio_and_get_structured_data(audio_path: str) -> dict:
                         "embedding_dependency": {
                             "type": "endpoint",
                             "endpoint": "https://team01-05-4067-resource.cognitiveservices.azure.com/openai/deployments/gpt-4.1/chat/completions?api-version=2025-01-01-preview",
-                            "authentication": {
-                               
-                    
+                            "authentication": {                    
                             },
                         }
                     },

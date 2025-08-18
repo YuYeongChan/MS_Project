@@ -94,26 +94,6 @@ os.makedirs(registration_photo_folder, exist_ok=True)
 app.mount("/registration_photos", StaticFiles(directory=registration_photo_folder), name="registration_photos")
 
 from fastapi.responses import JSONResponse
-# ex ) http://195.168.9.232:1234/computer.get?page=1
-# uvicorn homeController:app --host=0.0.0.0 --port=1234 --reload
-# ip 주소 계속 바뀜 :195.168.9.69
-
-# origins = [
-#     "http://localhost",
-#     "http://localhost:1234", # React Native 개발 서버 기본 포트
-#     "exp://192.168.56.1:1234", # 예: "exp://192.168.1.100:19000"
-#     # 실제 기기에서 테스트 시, 개발 머신의 IP 주소를 사용하여 Expo Go 앱의 URL을 추가합니다.
-#     # 예시: "exp://192.168.1.100:19000" (자신의 IP 주소와 Expo 포트에 맞게 변경)
-#     "*" # 개발 목적으로 모든 Origin 허용. 배포 시 반드시 제거!
-# ]
-
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,       # 허용할 Origin 목록
-#     allow_credentials=True,      # 인증 정보 (쿠키 등) 포함 요청 허용
-#     allow_methods=["*"],         # 모든 HTTP 메서드 (GET, POST 등) 허용
-#     allow_headers=["*"],         # 모든 HTTP 헤더 허용
-# )
 
 
 # 회원가입 API 엔드포인트
