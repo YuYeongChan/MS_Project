@@ -227,10 +227,8 @@ const PublicPropertyReportScreen = () => {
         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
-      setIsRecording(true);
     } catch (err) {
       Alert.alert("오류", "음성 녹음 시작에 실패했습니다.");
-      setIsRecording(false);
     }
   };
 
