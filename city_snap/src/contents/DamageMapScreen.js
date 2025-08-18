@@ -22,12 +22,6 @@ export default function DamageMapScreen() {
   useEffect(() => {
     const loadUserLocationAndDamageData = async () => {
       try {
-        // const token = await AsyncStorage.getItem("auth_token");
-        // if (!token) {
-        //   Alert.alert("에러", "로그인이 필요합니다.");
-        //   return;
-        // }
-
         const { access } = await getTokens();
 
         if (!access) {
@@ -84,185 +78,203 @@ export default function DamageMapScreen() {
     }
   };
 
+  // --- WebView HTML 생성 함수 ---
   const generateMapHtml = (locations, center) => {
-  const locationsArrayString = JSON.stringify(
-    locations.map((loc) => ({
-      lat: loc.latitude,
-      lng: loc.longitude,
-      address: loc.address,
-      details: loc.details,
-      date: loc.date,
-      nickname: loc.nickname,
-      photo_url: `${API_BASE_URL}/registration_photos/${loc.photo_url}`,
-    }))
-  );
-
-  const centerLat = center?.lat || 37.5665;
-  const centerLng = center?.lng || 126.9780;
-
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-      <title>파손 현황 지도</title>
-      <style>
-        html, body, #map {height:100%; width:100%; margin:0; padding:0;}
-        #infoBox {
-          position: absolute;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
-          background: white;
-          border-radius: 12px;
-          padding-top: 15px;
-          padding-right: 15px;
-          padding-left: 15px;
-          box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
-          width: 80%;
-          height: 40%;
-          font-size: 16px;
-          display: none;
-          z-index: 9999;
-          font-family: 'PretendardGOV-Regular', sans-serif;
-          line-height: 1.5;
-        }
-
-        #infoBox .info-row {
-          display: flex;
-          align-items: flex-start;
-          margin-bottom: 6px;
-        }
-
-        #infoBox .label {
-          width: 70px;
-          font-weight: bold;
-          color: #436D9D;
-          flex-shrink: 0;
-        }
-
-        #infoBox .value {
-          flex: 1;
-          color: #333;
-        }
-
-        #infoBox .closeBtn {
-          position: absolute;
-          top: -35px;
-          right: 0px;
-          background: #f44336;
-          color: white;
-          border: none;
-          border-radius: 50%;
-          width: 30px;
-          height: 30px;
-          text-align: center;
-          line-height: 22px;
-          cursor: pointer;
-          font-size: 16px;
-          box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
-        }
-
-        #infoBox .image-container {
-          margin-top: 10px;
-          width: 290px;
-          height: 150px;
-          overflow: hidden;
-          position: relative;
-          border-radius: 8px;
-        }
-
-        #infoBox img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          display: block;
-        }
-
-        #infoBox span{
-          font-weight: bold;
-          font-size: 18px;
-          margin-bottom: 8px;
-          padding-bottom: 5px;
-          display: inline-block;
-          border-bottom: 2px solid #436d9de7;
-          width: 100%;
-        }
-
-        #infoBox .description {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          line-height: 1.5;
-          max-height: calc(1.5em * 2);
-          white-space: pre-line;
-        }
-      </style>
-      <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
-    </head>
-    <body>
-      <div id="map"></div>
-      <div id="infoBox">
-        <button class="closeBtn" onclick="hideInfoBox()">×</button>
-        <div id="infoContent"></div>
-      </div>
-      <script>
-        var map;
-        var markers = [];
-        var damageLocations = ${locationsArrayString};
-        var infoBox, infoContent;
-
-        function initMap() {
-          map = new google.maps.Map(document.getElementById('map'), {
-            center: new google.maps.LatLng(${centerLat}, ${centerLng}),
-            zoom: 15,
-            disableDefaultUI: false
-          });
-
-          infoBox = document.getElementById('infoBox');
-          infoContent = document.getElementById('infoContent');
-
-          damageLocations.forEach(function(location) {
-            var marker = new google.maps.Marker({
-              position: new google.maps.LatLng(location.lat, location.lng),
-              map: map
-            });
-
-            marker.addListener('click', function() {
-              showInfoBox(location, marker);
-            });
-
-            markers.push(marker);
+    const locationsArrayString = JSON.stringify(
+      (locations || []).map((loc) => {
+        const images = [];
+        if (loc.photo_url) {
+          images.push({
+            type: "제보 사진",
+            url: `${API_BASE_URL}/registration_photos/${String(
+              loc.photo_url
+            ).replace(/^\//, "")}`,
           });
         }
 
-        function showInfoBox(location, marker) {
-          infoContent.innerHTML = \`
-            <span>\${location.address}</span><br/>
-            <strong>\${location.date}</strong><br/>
-            <div class="description">\${location.details}</div>
-            <div class="image-container">
-              <img src="\${location.photo_url}" />
-            </div>
-          \`;
-          infoBox.style.display = "block";
+        return {
+          lat: Number(loc.latitude),
+          lng: Number(loc.longitude),
+          address: loc.address || "주소 정보 없음",
+          details: loc.details || "상세 내용 없음",
+          date: loc.date || "날짜 정보 없음",
+          nickname: loc.nickname || "익명",
+          images: images,
+          status_text:
+            Number(loc.repair_status ?? 0) === 0
+              ? "수리 대기중"
+              : "수리 완료",
+        };
+      })
+    );
 
-          // 지도 중심을 클릭한 마커로 이동
-          map.panTo(marker.getPosition());
-        }
+    const centerLat = center?.lat || 37.5665;
+    const centerLng = center?.lng || 126.978;
 
-        function hideInfoBox() {
-          infoBox.style.display = "none";
-        }
-      </script>
-    </body>
-    </html>
-  `;
-};
+    return `
+      <!DOCTYPE html>
+      <html lang="ko">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+          <title>파손 현황 지도</title>
+          <style>
+              @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+              html, body, #map { height: 100%; width: 100%; margin: 0; padding: 0; overflow: hidden; }
+              body { position: relative; font-family: 'Noto Sans KR', sans-serif; }
+              #infoContainer { position: absolute; bottom: -100%; left: 0; width: 100%; z-index: 100; transition: bottom 0.35s cubic-bezier(0.25, 0.8, 0.25, 1); pointer-events: none; padding: 0 10px 20px 10px; box-sizing: border-box; }
+              #infoCard { background: white; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); overflow: hidden; max-height: 80vh; display: flex; flex-direction: column; pointer-events: auto; }
+              #cardContent { overflow-y: auto; padding: 16px; }
+              #backBtn { position: absolute; top: 10px; left: 10px; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.5); border: none; cursor: pointer; z-index: 20; display: flex; align-items: center; justify-content: center; }
+              .image-section { position: relative; width: 100%; background-color: #f1f3f5; padding: 16px 0; }
+              .image-scroll-container { overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+              .image-scroll-container::-webkit-scrollbar { display: none; }
+              .image-slider { display: flex; gap: 12px; padding: 0 16px; }
+              
+              .image-card { 
+                flex: 0 0 100%; /* 화면 전체 너비 */
+                max-width: 100%;
+                scroll-snap-align: start; 
+                position: relative;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                overflow: hidden;
+                background-color: #e9ecef;
+                aspect-ratio: 4 / 3;
+              }
+              .image-card img { 
+                width: 100%; 
+                height: 100%; 
+                object-fit: cover;
+              }
+
+              .image-badge { 
+                position: absolute; 
+                top: 10px; 
+                right: 10px;
+                padding: 5px 10px; 
+                border-radius: 15px; 
+                font-size: 12px; 
+                font-weight: 700; 
+                color: white; 
+                background-color: rgba(0, 123, 255, 0.8); 
+              }
+
+              .info-item { display: flex; align-items: flex-start; margin-bottom: 12px; }
+              .info-item svg { width: 20px; height: 20px; margin-right: 12px; fill: #868e96; flex-shrink: 0; margin-top: 2px; }
+              .info-text .label { font-weight: 700; font-size: 16px; color: #212529; margin-bottom: 2px; }
+              .info-text .value { font-size: 14px; color: #495057; line-height: 1.5; }
+              #address-info .label { font-size: 18px; }
+          </style>
+          <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
+      </head>
+      <body>
+          <div id="map"></div>
+          <div id="infoContainer">
+              <div id="infoCard">
+                  <div class="image-section">
+                      <div class="image-scroll-container">
+                          <div id="imageSlider" class="image-slider"></div>
+                      </div>
+                       <button id="backBtn" aria-label="뒤로가기">
+                         <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 0 24 24" width="24px" fill="#FFFFFF"><path d="M0 0h24v24H0V0z" fill="none"/><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                       </button>
+                  </div>
+                  <div id="cardContent">
+                      <div id="address-info" class="info-item"></div>
+                      <div id="date-info" class="info-item"></div>
+                      <div id="user-info" class="info-item"></div>
+                      <div id="status-info" class="info-item"></div>
+                  </div>
+              </div>
+          </div>
+          <script>
+              var map, markers = [];
+              var damageLocations = ${locationsArrayString};
+              var infoContainer, backBtn;
+              var currentMarker = null;
+
+              const ICONS = {
+                  location: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+                  calendar: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zM5 8V6h14v2H5z"/></svg>',
+                  user: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>',
+                  status: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-4-4 1.41-1.41L10 12.17l6.59-6.59L18 7l-8 8z"/></svg>'
+              };
+              
+              function initMap() {
+                  map = new google.maps.Map(document.getElementById('map'), {
+                      center: new google.maps.LatLng(${centerLat}, ${centerLng}),
+                      zoom: 15,
+                      disableDefaultUI: false,
+                      gestureHandling: 'greedy'
+                  });
+
+                  infoContainer = document.getElementById('infoContainer');
+                  backBtn = document.getElementById('backBtn');
+                  backBtn.addEventListener('click', hideInfoBox);
+                  map.addListener('click', hideInfoBox);
+
+                  damageLocations.forEach(function(location) {
+                      if (!location.lat || !location.lng) return;
+                      var marker = new google.maps.Marker({
+                          position: new google.maps.LatLng(location.lat, location.lng),
+                          map: map
+                      });
+                      marker.addListener('click', function(e) {
+                          if (e.domEvent) e.domEvent.stopPropagation();
+                          showInfoBox(location, marker);
+                      });
+                      markers.push(marker);
+                  });
+              }
+
+              function esc(str) { if (!str) return ""; return String(str).replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+              
+              function hideInfoBox() {
+                  if (infoContainer.style.bottom === '0px') {
+                      infoContainer.style.bottom = "-100%";
+                      if(currentMarker) currentMarker = null;
+                  }
+              }
+
+              function createInfoItem(icon, label, value) {
+                  return \`\${icon}<div class="info-text"><div class="label">\${esc(label)}</div><div class="value">\${esc(value)}</div></div>\`;
+              }
+              
+              function showInfoBox(location, marker) {
+                  const imageSlider = document.getElementById('imageSlider');
+                  imageSlider.innerHTML = '';
+
+                  if (location.images && location.images.length > 0) {
+                    location.images.forEach(img => {
+                        const cardHTML = \`
+                            <div class="image-card">
+                                <img src="\${img.url}" alt="\${esc(img.type)}"
+                                     onerror="this.parentElement.innerHTML = '<div style=&quot;width:100%; height:100%; display:flex; align-items:center; justify-content:center; color:#868e96;&quot;>이미지 로딩 실패</div>'">
+                                <div class="image-badge">\${esc(img.type)}</div>
+                            </div>
+                        \`;
+                        imageSlider.innerHTML += cardHTML;
+                    });
+                  } else {
+                      imageSlider.innerHTML = '<div style="text-align:center; width:100%; padding: 20px 0; color: #868e96;">표시할 이미지가 없습니다.</div>';
+                  }
+
+                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, location.address, location.details);
+                  document.getElementById('date-info').innerHTML = createInfoItem(ICONS.calendar, '신고 날짜', location.date);
+                  document.getElementById('user-info').innerHTML = createInfoItem(ICONS.user, '신고자', location.nickname);
+                  document.getElementById('status-info').innerHTML = createInfoItem(ICONS.status, '현재 상태', location.status_text);
+                  
+                  infoContainer.style.bottom = "0px";
+                  map.panTo(marker.getPosition());
+                  if (map.getZoom() < 16) map.setZoom(16);
+                  currentMarker = marker;
+              }
+          </script>
+      </body>
+      </html>
+    `;
+  };
 
   if (isLoading) {
     return (

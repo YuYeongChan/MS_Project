@@ -2,7 +2,11 @@ import { getTokens, saveTokens, clearTokens } from './authStorage';
 
 // build 시 EXPO_PUBLIC_API_BASE_URL 값이 있으면 사용, 없으면 해당 url 사용
 const API_BASE_URL =
+<<<<<<< HEAD
   process.env.EXPO_PUBLIC_API_BASE_URL || 'http://192.168.56.1:1234';
+=======
+  process.env.EXPO_PUBLIC_API_BASE_URL || 'http://';
+>>>>>>> b8f2e234e6b45eb20f76bd025dd1a28e707c4a53
 
 // refresh 엔드포인트
 const REFRESH_PATH = '/auth/refresh';
@@ -120,4 +124,6 @@ export const api = {
     }).then((r) => r.json()),
   postForm: (p, formData) =>
     apiFetch(p, { method: 'POST', body: formData }).then((r) => r.json()),
+  // delete 메서드 추가
+  delete: (p) => apiFetch(p, { method: 'DELETE' }).then((r) => r.json()),
 };

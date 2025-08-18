@@ -449,7 +449,7 @@ class RegistrationDAO:
                 SELECT REPORT_ID, LOCATION_DESCRIPTION, REPORT_DATE, USER_ID, 
                        IS_NORMAL, REPAIR_STATUS, PHOTO_URL
                 FROM REPORTS 
-                ORDER BY REPORT_ID DESC
+                ORDER BY REPORT_DATE DESC
             """
             cur.execute(sql)
             

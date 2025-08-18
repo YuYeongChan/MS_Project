@@ -17,6 +17,7 @@ import MyInfoScreen from "./src/contents/MyInfoScreen";
 import DamageMapScreen from './src/contents/DamageMapScreen';
 import RankingScreen from './src/contents/RankingScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
+
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
 import MyReportsScreen from './src/contents/MyReportsScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
@@ -118,7 +119,8 @@ function UserAppStack() {
 function AdminAppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}  initialRouteName="AdminMainScreen">
-      <Stack.Screen name="AdminMainScreen" component={AdminLayout} />
+      <Stack.Screen name="AdminMainScreen" component={AdminMainScreen} />
+      <Stack.Screen name="AdminLayout" component={AdminLayout} />
     </Stack.Navigator>
   );
 }
