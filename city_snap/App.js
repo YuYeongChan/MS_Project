@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -20,6 +20,7 @@ import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
 import MyReportsScreen from './src/contents/MyReportsScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
+import * as Notifications from 'expo-notifications';
 
 // ---- auth bootstrap ----
 import { AuthProvider, useAuth } from './src/auth/authProvider';
@@ -27,6 +28,33 @@ import AuthGate from './src/auth/authGate';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// 알림 핸들러 설정
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,   // 포그라운드에서도 배너/알림 표시
+    shouldPlaySound: true,   // 사운드 재생
+    shouldSetBadge: false,   // iOS 뱃지 카운트는 사용 안 함 (원하면 true)
+  }),
+});
+
+// 알림 터치 시 특정 화면으로 이동 (구현 x)
+// const responseListener = useRef();
+
+// useEffect(() => {
+//   responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+//     const data = response.notification.request.content.data || {};
+//     // 예: data.route = 'NoticeDetail', data.id = 123 등
+//     // navigation.navigate(data.route, { id: data.id });
+//   });
+
+//   return () => {
+//     if (responseListener.current) {
+//       Notifications.removeNotificationSubscription(responseListener.current);
+//     }
+//   };
+// }, []);
+
 
 // for User
 function UserTabNavigator() {

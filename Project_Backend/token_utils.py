@@ -13,6 +13,9 @@ REFRESH_SECRET_KEY = os.environ.get(
     "please_use_a_different_refresh_secret"
 )
 
+# Expo 알림 기능 URL
+EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+
 # === 토큰 생성 유틸리티 ===
 def create_access_token(payload: dict) -> str:
     data = payload.copy()

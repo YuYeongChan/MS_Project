@@ -1,10 +1,11 @@
 import sys
 import os
-from fastapi import FastAPI, Form, UploadFile, HTTPException, File, APIRouter, Query # APIRouter 임포트 유지
+from fastapi import Body, FastAPI, Form, UploadFile, HTTPException, File, APIRouter, Query, Depends, Header
 from ProjectDB.Account.accountDAO import AccountDAO
 from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from ProjectDB.Notice.noticeDAO import NoticeDAO
+from ProjectDB.Notification.notificationDAO import NotificationDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles
@@ -13,10 +14,10 @@ import json # json 임포트 유지
 from datetime import datetime, timedelta
 import jwt
 # 개인정보 수정
-from fastapi import Depends, Header
 from pydantic import BaseModel
 from urllib.parse import unquote # ADMIN 랭킹 개인정보 확인
-from token_utils import create_access_token, create_refresh_token, REFRESH_SECRET_KEY, SECRET_KEY, ALGORITHM
+from token_utils import create_access_token, create_refresh_token, REFRESH_SECRET_KEY, SECRET_KEY, ALGORITHM, EXPO_PUSH_URL
+import httpx
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
 
@@ -26,6 +27,7 @@ rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
 regDAO = RegistrationDAO()
+notifyDAO = NotificationDAO()
 
 # JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
@@ -564,3 +566,175 @@ def auth_refresh(body: RefreshIn):
 
     # (선택) refresh rotation: 새 refresh도 함께 내려주고, 이전 refresh를 폐기(블랙리스트/DB저장)하는 설계 권장
     return {"accessToken": new_access}
+
+# 알림용 토큰 저장
+@app.post("/account.save_push_token")
+def save_push_token(expoPushToken: str = Body(...), authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Authorization 오류")
+    token = authorization[7:]
+    user = decode_token(token)
+    user_id = user["user_id"]
+
+    result = notifyDAO.saveExpoPushToken(user_id, expoPushToken)
+
+    if result:
+        return {"message": "토큰 저장 완료"}
+    else:
+        raise HTTPException(status_code=500, detail="토큰 저장 실패")
+    
+@app.post("/notification.notify")
+def send_notification(to_user_id: str = Body(...), title: str = Body(...), body: str = Body(...), data: dict = Body({})):
+    h = {"Access-Control-Allow-Origin": "*"}
+
+    # DB에서 대상자의 expo_push_token 조회
+    token = notifyDAO.getExpoPushToken(to_user_id)
+    if not token:
+        raise HTTPException(status_code=400, detail="푸시 토큰 없음")
+
+    payload = {
+        "to": token,             # "ExponentPushToken[xxx]"
+        "title": title,
+        "body": body,
+        "data": data,            # 클릭 시 사용할 딥링크 정보 등
+        "sound": "default",
+        "channelId": "default",
+        "priority": "high",
+    }
+
+    try:
+        with httpx.Client(timeout=10) as client:
+            r = client.post(EXPO_PUSH_URL, json=payload)
+            r.raise_for_status()
+            body = {
+                "result": r.json()
+            }
+            return JSONResponse(body, headers=h)
+        
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=500, detail=f"Expo Push 전송 실패: {str(e)}")
+
+# 100개씩 나눠서 알림을 보내기 위한 용도
+def chunk(lst, n=100):
+    for i in range(0, len(lst), n):
+        yield lst[i:i+n]
+
+@app.post("/notification.notify_admin")
+async def send_notification_to_admin(title: str = Body(...), body: str = Body(...), data: dict = Body({})):
+    h = {"Access-Control-Allow-Origin": "*"}
+
+    # admin의 토큰만 추출
+    admin_tokens = notifyDAO.getAdminExpoPushToken()
+
+    if not admin_tokens:
+        raise HTTPException(status_code=400, detail="푸시 토큰 없음")
+
+    tickets = []
+    errors = []
+
+    # 100개씩 나눠서 알림 전송
+    async with httpx.AsyncClient(timeout=15) as client:
+        # 청크별 전송 (순차/동시 중 택1; 안정성을 위해 순차 전송)
+        for group in chunk(admin_tokens, 100):
+            messages = []
+            for t in group:
+                msg = {
+                    "to": t,
+                    "title": title,
+                    "body": body,
+                    "data": data,
+                    "sound": "default",
+                    "channelId": "default",
+                    "priority": "high",
+                }
+                if data is not None:
+                    msg["data"] = data
+                messages.append(msg)
+
+            resp = await client.post(EXPO_PUSH_URL, json=messages)
+            resp.raise_for_status()
+            out = resp.json()
+
+            # 각 메시지별 ticket 처리
+            for item in out["data"]:
+                if item["status"] == "ok":
+                    if "id" in item:
+                        tickets.append(item["id"])
+                else:
+                    errors.append(item)  # 개별 실패(토큰 형식 오류 등)
+
+            body = {
+                "result": {
+                    "tickets": tickets,
+                    "errors": errors,
+                    "count": len(messages)
+                }
+            }
+
+            return JSONResponse(body, headers=h)
+        
+@app.post("/notification.notify_local")
+async def send_notification_to_admin(user_id: str = Body(...), title: str = Body(...), body: str = Body(...), data: dict = Body({})):
+    h = {"Access-Control-Allow-Origin": "*"}
+
+    # admin의 토큰만 추출
+    admin_tokens = notifyDAO.getAdminExpoPushToken()
+
+    if not admin_tokens:
+        raise HTTPException(status_code=400, detail="푸시 토큰 없음")
+
+    tickets = []
+    errors = []
+
+    # 100개씩 나눠서 알림 전송
+    async with httpx.AsyncClient(timeout=15) as client:
+        # 청크별 전송 (순차/동시 중 택1; 안정성을 위해 순차 전송)
+        for group in chunk(admin_tokens, 100):
+            messages = []
+            for t in group:
+                msg = {
+                    "to": t,
+                    "title": title,
+                    "body": body,
+                    "data": data,
+                    "sound": "default",
+                    "channelId": "default",
+                    "priority": "high",
+                }
+                if data is not None:
+                    msg["data"] = data
+                messages.append(msg)
+
+            resp = await client.post(EXPO_PUSH_URL, json=messages)
+            resp.raise_for_status()
+            out = resp.json()
+
+            # 각 메시지별 ticket 처리
+            for item in out["data"]:
+                if item["status"] == "ok":
+                    if "id" in item:
+                        tickets.append(item["id"])
+                else:
+                    errors.append(item)  # 개별 실패(토큰 형식 오류 등)
+
+            body = {
+                "result": {
+                    "tickets": tickets,
+                    "errors": errors,
+                    "count": len(messages)
+                }
+            }
+
+            return JSONResponse(body, headers=h)
+    
+@app.post("/test")
+def test():
+    h = {"Access-Control-Allow-Origin": "*"}
+
+    # admin의 토큰만 추출
+    admin_token = notifyDAO.getAdminExpoPushToken()
+    body = {
+        "result": admin_token
+    }
+
+    return JSONResponse(body, headers=h)

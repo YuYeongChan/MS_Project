@@ -21,7 +21,7 @@ import axios from "axios";
 import { googleMapsApiKey } from "../utils/config";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import { getTokens } from "../auth/authStorage";
-import { apiFetch } from "../auth/api";
+import { apiFetch, api } from "../auth/api";
 import jwt_decode from 'jwt-decode';
 import Ionicons from "react-native-vector-icons/Ionicons"; // 아이콘 import
 import { useNavigation } from "@react-navigation/native";
@@ -95,10 +95,12 @@ const PublicPropertyReportScreen = () => {
 
     const { access } = await getTokens();
     let userid;
+    let nickname;
     if (access) {
       try{
         const decoded = jwt_decode(access);
         userid = decoded.user_id;
+        nickname = decoded.nickname;
       } catch (error) {
         console.error('토큰 디코딩 오류:', error);
       }
@@ -131,13 +133,21 @@ const PublicPropertyReportScreen = () => {
 
       const responseData = await res.json();
       if (res.ok) {
+
+        const data = {
+          "title": "신규 신고 등록 알림",
+          "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`
+        }
+
+        // 관리자에게 알림 보냄
+        const res = api.postJSON("/notification.notify_admin", data);
+
         Alert.alert(
           "신고 성공",
           responseData.result || "신고가 성공적으로 등록되었습니다."
         );
         setPhoto(null);
         setDetail("");
-        setAudioUri(null);
         setDate(null);
         setLocation(null);
         setVisible(false);
@@ -190,7 +200,6 @@ const PublicPropertyReportScreen = () => {
 
       await recording.stopAndUnloadAsync();
       const uri = recording.getURI();
-      setAudioUri(uri);
       console.log(" 서버에 업로드 요청 시작");
 
       const formData = new FormData();

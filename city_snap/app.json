@@ -25,7 +25,8 @@
         ]
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.moon0929.city_snap"
+      "package": "com.moon0929.city_snap",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -40,7 +41,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications"
     ],
     "extra": {
       "eas": {

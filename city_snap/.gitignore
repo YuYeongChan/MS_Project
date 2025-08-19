@@ -35,3 +35,7 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# google service file for notification
+ainuri-9f91e-firebase-adminsdk-fbsvc-85cd7a9489.json
+google-services.json

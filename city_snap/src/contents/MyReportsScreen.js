@@ -3,13 +3,10 @@ import {
     View, Text, Image, ActivityIndicator,
     Alert, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE_URL } from "../utils/config";
-import { api } from "../auth/api";
+import { api, apiFetch } from "../auth/api";
 import Ionicons from "react-native-vector-icons/Ionicons"; 
-import { useNavigation, useFocusEffect } from "@react-navigation/native";
-// import { Ionicons } from "react-native-vector-icons"; 
-import { useCallback } from "react";
+import { useNavigation } from "@react-navigation/native";
 
 const MyReportsScreen = () => {
   const [reports, setReports] = useState([]);
@@ -61,15 +58,9 @@ const MyReportsScreen = () => {
                     style: "destructive",
                     onPress: async () => {
                         try {
-                            const token = await AsyncStorage.getItem("auth_token");
-                            const response = await fetch(`${API_BASE_URL}/my_reports/${reportId}`, {
-                                method: "DELETE",
-                                headers: {
-                                    Authorization: `Bearer ${token}`,
-                                },
-                            });
-                            const result = await response.json();
-                            if (response.ok) {
+                            const res = await apiFetch(`${API_BASE_URL}/my_reports/${reportId}`, { method: 'DELETE'});
+                            const result = await res.json();
+                            if (res.ok) {
                                 Alert.alert("삭제 완료", "신고가 삭제되었습니다.");
                                 setReports((prevReports) =>
                                     prevReports.filter((item) => item.report_id !== reportId)

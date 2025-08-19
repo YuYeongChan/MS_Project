@@ -89,10 +89,37 @@ export default function AdminReportListScreen() {
                 body: formData,
             });
 
+            if(repairStatusInModal){
+
+                // 해당 건을 올린 사용자에게 수리 완료 알림
+                const data = {
+                    "to_user_id" : selectedReport.report_id,
+                    "title": "수리 완료 알림",
+                    "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
+                }
+                const res = await api.postJSON("/notification.notify", data);
+
+                // 근처 다른 사용자에게 수리 완료 알림
+            }
+
             if (response.ok) {
                 Alert.alert("성공", "상태가 업데이트되었습니다.");
                 setModalVisible(false);
                 fetchAllReports(); // 목록 새로고침
+
+                // 수리 완료로 상태를 변경하였을 시
+                if(repairStatusInModal){
+
+                    // 해당 건을 올린 사용자에게 수리 완료 알림
+                    const data = {
+                        "to_user_id" : selectedReport.report_id,
+                        "title": "수리 완료 알림",
+                        "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
+                    }
+                    const res = await api.postJSON("/notification.notify", data);
+
+                    // 근처 다른 사용자에게 수리 완료 알림
+                }
                 
                 appEvents.emit(EVENTS.REPORT_STATUS_UPDATED, {
                     reportId: selectedReport.report_id,
