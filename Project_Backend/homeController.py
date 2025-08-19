@@ -93,11 +93,14 @@ router = APIRouter()
 BASE_DIR = os.path.dirname(__file__)
 INPUT_DIR = os.path.join(BASE_DIR, "input_images")
 MASK_DIR  = os.path.join(BASE_DIR, "mask_images")
+ANALYSIS_DIR = os.path.join(BASE_DIR, "analysis_photo")
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(MASK_DIR,  exist_ok=True)
+os.makedirs(ANALYSIS_DIR, exist_ok=True)
 
 app.mount("/input_images", StaticFiles(directory=INPUT_DIR), name="input_images")
 app.mount("/mask_images",  StaticFiles(directory=MASK_DIR),  name="mask_images")
+app.mount("/analysis_photo", StaticFiles(directory=ANALYSIS_DIR), name="analysis_photo")
 
 
 # "/profile_photos" 경로로 해당 폴더를 정적 파일 제공
@@ -281,10 +284,7 @@ def getAllDamageReports(): #
     모든 파손 보고서의 위도, 경도, location_description 정보를 조회합니다.
     DamageMapScreen에서 지도에 마커를 표시하는 데 사용됩니다.
     """
-    reports = rDAO.getAllDamageReportLocations()
-    if reports is None:
-        raise HTTPException(status_code=500, detail="데이터베이스에서 보고서를 가져오는 데 실패했습니다.")
-    return {"result": reports}
+    return msDAO.getAllDamageReportLocations()  # JSONResponse를 그대로 반환
 
 
 
