@@ -281,8 +281,7 @@ export default function DamageMapScreen() {
                       imageSlider.innerHTML = '<div style="text-align:center; width:100%; padding: 20px 0; color: #868e96;">표시할 이미지가 없습니다.</div>';
                   }
 
-                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, '위치', location.address);
-                  document.getElementById('details-info').innerHTML = createInfoItem(ICONS.location, '신고 내용', location.details);
+                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, location.address, location.details);
                   document.getElementById('date-info').innerHTML = createInfoItem(ICONS.calendar, '신고 날짜', location.date);
                   document.getElementById('user-info').innerHTML = createInfoItem(ICONS.user, '신고자', location.nickname);
                   document.getElementById('status-info').innerHTML = createInfoItem(ICONS.status, '현재 상태', location.status_text);
