@@ -32,7 +32,7 @@ notifDAO = NotificationDAO()
 
 # ai 서버 url
 AI_BASE_URL = os.environ.get("AI_BASE_URL", "http://128.24.59.107:8000")
-ai_service = ImageAiDAO(ai_base_url=AI_BASE_URL)  # (참고) 현재 이 인스턴스는 사용 안 함
+ai_service = ImageAiDAO(ai_base_url=AI_BASE_URL)
 
 # JWT 함수들(개인정보수정 토큰)
 def decode_token(token: str):
