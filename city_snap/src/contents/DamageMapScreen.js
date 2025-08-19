@@ -66,11 +66,16 @@ export default function DamageMapScreen() {
       const res = await fetch(`${API_BASE_URL}/get_all_damage_reports`);
       const data = await res.json();
 
-      if (res.ok && Array.isArray(data.result)) {
-        setDamageLocations(data.result);
-      } else {
-        Alert.alert("데이터 오류", "파손 현황을 불러오지 못했습니다.");
-      }
+      // 베열 그대로 오든, {result:[...]}로 오든 모두 지원
+      const rows = Array.isArray(data)
+        ? data
+        : Array.isArray(data.result)
+          ? data.result
+          : Array.isArray(data.data)
+            ? data.data
+            : [];
+        if (!res.ok) throw new Error("bad response");
+        setDamageLocations(rows);
     } catch (err) {
       Alert.alert("통신 오류", "파손 현황 조회 중 문제가 발생했습니다.");
     } finally {
@@ -95,13 +100,19 @@ export default function DamageMapScreen() {
         return {
           lat: Number(loc.latitude),
           lng: Number(loc.longitude),
-          address: loc.address || "주소 정보 없음",
+          // ✔️ 서버 키에 맞춰 안전 폴백
+          address: loc.location_description || loc.address || "주소 정보 없음",
           details: loc.details || "상세 내용 없음",
-          date: loc.date || "날짜 정보 없음",
-          nickname: loc.nickname || "익명",
+          date:
+            (typeof loc.report_date === "string"
+              ? loc.report_date.replace("T", " ").slice(0, 19)
+              : loc.report_date) ||
+            loc.date ||
+            "날짜 정보 없음",
+          nickname: loc.user_id || loc.nickname || "익명",
           images: images,
           status_text:
-            Number(loc.repair_status ?? 0) === 0
+            Number(loc.repair_status ?? loc.REPAIR_STATUS ?? 0) === 0
               ? "수리 대기중"
               : "수리 완료",
         };
@@ -166,7 +177,14 @@ export default function DamageMapScreen() {
               .info-text .value { font-size: 14px; color: #495057; line-height: 1.5; }
               #address-info .label { font-size: 18px; }
           </style>
-          <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
+          <script>
+            window.onerror = function(msg){
+              var el = document.createElement('div');
+              el.style.cssText='position:absolute;top:8px;left:8px;z-index:9999;background:#ffe3e3;color:#c92a2a;padding:6px 8px;border-radius:6px;font:12px/1.2 -apple-system,Roboto,Segoe UI,Helvetica;';
+              el.textContent = 'JS Error: ' + msg;
+              document.body.appendChild(el);
+            };
+          </script>
       </head>
       <body>
           <div id="map"></div>
@@ -182,6 +200,7 @@ export default function DamageMapScreen() {
                   </div>
                   <div id="cardContent">
                       <div id="address-info" class="info-item"></div>
+                      <div id="details-info" class="info-item"></div>
                       <div id="date-info" class="info-item"></div>
                       <div id="user-info" class="info-item"></div>
                       <div id="status-info" class="info-item"></div>
@@ -227,6 +246,8 @@ export default function DamageMapScreen() {
                       markers.push(marker);
                   });
               }
+              // ⭐ 콜백 전역 바인딩 (가장 중요)
+              window.initMap = initMap;
 
               function esc(str) { if (!str) return ""; return String(str).replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
               
@@ -260,7 +281,8 @@ export default function DamageMapScreen() {
                       imageSlider.innerHTML = '<div style="text-align:center; width:100%; padding: 20px 0; color: #868e96;">표시할 이미지가 없습니다.</div>';
                   }
 
-                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, location.address, location.details);
+                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, '위치', location.address);
+                  document.getElementById('details-info').innerHTML = createInfoItem(ICONS.location, '신고 내용', location.details);
                   document.getElementById('date-info').innerHTML = createInfoItem(ICONS.calendar, '신고 날짜', location.date);
                   document.getElementById('user-info').innerHTML = createInfoItem(ICONS.user, '신고자', location.nickname);
                   document.getElementById('status-info').innerHTML = createInfoItem(ICONS.status, '현재 상태', location.status_text);
@@ -271,6 +293,8 @@ export default function DamageMapScreen() {
                   currentMarker = marker;
               }
           </script>
+          <!-- ⭐ 구글 맵 스크립트는 함수 정의 이후에 로드 -->
+          <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
       </body>
       </html>
     `;

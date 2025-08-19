@@ -76,12 +76,12 @@ export default function AdminDamageContent() {
       const repairStatus = Number(loc.REPAIR_STATUS ?? loc.repair_status ?? 0);
       const hasMask = !!loc.mask_url;
       const analyzedUrl = hasMask
-        ? toHttpUrl(loc.mask_url)                        // ⭐ DB의 analysis_photo\*.png → http URL로
-        : `${API_BASE_URL}/mask_images/no_mask_image.png`; // ⭐ 마스크 없을 땐 플레이스홀더
+        ? toHttpUrl(loc.mask_url)                        //  DB의 analysis_photo\*.png → http URL로
+        : `${API_BASE_URL}/mask_images/no_mask_image.png`; //  마스크 없을 땐 플레이스홀더
 
       const aiText = hasMask
-        ? (loc.ai_status || "AI 결과 없음")              // ⭐ 마스크 있으면 ai_status
-        : (loc.caption_ko || loc.ai_status || "AI 결과 없음"); // ⭐ 없으면 caption_ko
+        ? (loc.ai_status || "AI 결과 없음")              //  마스크 있으면 ai_status
+        : (loc.caption_ko || loc.ai_status || "AI 결과 없음"); //  없으면 caption_ko
 
       return {
         ...loc,
