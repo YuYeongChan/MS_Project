@@ -2,27 +2,24 @@ import { StyleSheet } from 'react-native';
 
 const shadow = {
     shadowColor: 'black',
-    shadowOffset: { width: 10, height: 10 },
-    shadowOpacity: 0.8,
-    shadowRadius: 20,
-    elevation: 7,
-}
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+};
 
 export const styles = StyleSheet.create({
     container: {
-        flex: 1,
+        flexGrow: 1,
         backgroundColor: "#F9F9F9",
         paddingTop: 10,
         paddingHorizontal: 20,
     },
-    noticeBox: {
-        backgroundColor: "#ECECEC",
-        borderRadius: 16,
-        padding: 18,
-        marginBottom: 18,
+    headerContainer: {
         flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        ...shadow,
+        marginBottom: 10,
     },
     title: {
         fontSize: 18,
@@ -30,38 +27,26 @@ export const styles = StyleSheet.create({
         fontFamily: 'PretendardGOV-Bold',
         marginBottom: 10,
     },
+    noticeBox: {
+        backgroundColor: "#FFFFFF",
+        borderRadius: 16,
+        padding: 18,
+        marginBottom: 18,
+        flexDirection: 'row',
+        alignItems: 'center',
+        ...shadow,
+        borderWidth: 1,
+        borderColor: '#ECECEC',
+    },
     noticeTitle: {
         fontSize: 16,
         color: "black",
         fontFamily: 'PretendardGOV-Bold',
-        marginLeft: 10,
     },
     noticeDate: {
         fontSize: 12,
         color: "#888",
-        marginLeft: 'auto',
         fontFamily: 'PretendardGOV-Bold',
-    },
-    noticeContent: {
-        fontSize: 15,
-        color: "#222",
-    },
-    emptyText: {
-        textAlign: "center",
-        color: "#888",
-        fontSize: 16,
-        fontFamily: 'PretendardGOV-Regular',
-        marginTop: 40,
-    },
-    list: {
-        borderColor: "#CBCDD3",
-        borderWidth: 2,
-        borderRadius: 16,
-        padding: 20,
-        height: 300,
-    },
-    fixedNotices: {
-        marginBottom: 18
     },
     pageButtonArea: {
         flexDirection: 'row',
@@ -81,114 +66,86 @@ export const styles = StyleSheet.create({
         fontFamily: 'PretendardGOV-Bold',
         fontSize: 15,
     },
+    disabledText: {
+        alignSelf: 'center',
+        color: '#ccc',
+        fontFamily: 'PretendardGOV-Bold',
+        fontSize: 15,
+    },
     modalOverlay: {
         flex: 1,
         justifyContent: 'center',
+        alignItems: 'center',
         backgroundColor: 'rgba(0,0,0,0.5)',
-        maxHeight: '100%',
     },
     modalContent: {
-        backgroundColor: '#fff',
-        marginHorizontal: 20,
-        padding: 20,
-        borderRadius: 12,
-        elevation: 10,
+        width: '90%',
         height: '70%',
-    },
-    modalButton: {
-        backgroundColor: "#436D9D",
-        borderRadius: 20,
-        marginTop: 'auto',
-        height: 35,
-        alignItems: 'center',
-        paddingVertical: 4,
-        ...shadow,
-    },
-    modalButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontFamily: 'PretendardGOV-Bold',
+        backgroundColor: '#fff',
+        padding: 25,
+        borderRadius: 15,
+        elevation: 10,
     },
     modalContentHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        paddingBottom: 15,
         borderBottomWidth: 1,
-        borderBottomColor: '#cacacaff',
-        borderTopWidth: 1,
-        borderTopColor: '#cacacaff',
-        height: 50,
+        borderBottomColor: '#eee',
+        marginBottom: 5,
     },
     modalTitle: {
-        fontSize: 18,
-        color: "#436D9D",
+        fontSize: 20,
+        color: "#333",
         fontFamily: 'PretendardGOV-Bold',
-        marginLeft: 5,
     },
     modalDate: {
         fontSize: 12,
-        fontFamily: 'PretendardGOV-Bold',
-        color: "#888",
-        marginLeft: 'auto',
-        marginTop: 5,
-    },
-    modalAdmin: {
-        fontSize: 14,
-        color: "#888",
         fontFamily: 'PretendardGOV-Regular',
-        marginLeft: 'auto',
-        marginRight: 3,
-        marginTop: 5,
+        color: "#999",
+        marginBottom: 15,
+        textAlign: 'right',
+    },
+    modalScrollView: {
+        flex: 1,
     },
     modalContentText: {
-        fontSize: 15,
-        color: "#222",
-        marginTop: 10,
+        fontSize: 16,
+        lineHeight: 24,
+        color: "#555",
         fontFamily: 'PretendardGOV-Regular',
+        paddingBottom: 20,
     },
-    deleteButton: {
-    backgroundColor: "#c91515",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginLeft: 10,
+    modalCloseIcon: {
+        position: 'absolute',
+        top: 15,
+        right: 15,
+        padding: 5,
+        zIndex: 1,
     },
-        writeContainer: {
+    modalButtonRow: {
+        flexDirection: 'row',
+        marginTop: 20,
+    },
+    modalActionButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 10,
+        ...shadow,
+    },
+    modalEditButton: {
+        backgroundColor: '#5D8BFF',
+        marginRight: 8,
+    },
+    modalDeleteButton: {
+        backgroundColor: '#FF6B6B',
+        marginLeft: 8,
+    },
+    writeContainer: {
         flex: 1,
         padding: 20,
         backgroundColor: '#F9F9F9',
-    },
-    inputField: {
-        backgroundColor: 'white',
-        borderRadius: 10,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        padding: 15,
-        fontSize: 16,
-        marginBottom: 15,
-        fontFamily: 'PretendardGOV-Regular',
-    },
-    contentField: {
-        height: 200, // 내용 입력란 높이
-        textAlignVertical: 'top', // 안드로이드에서 텍스트가 위에서부터 시작하도록
-    },
-    buttonRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 20,
-    },
-    cancelButton: {
-        backgroundColor: '#888',
-        flex: 1, // 버튼이 공간을 차지하도록
-        marginRight: 10, // 오른쪽 버튼과의 간격
-    },
-    modalButton: { // 등록 버튼 스타일 재활용
-        backgroundColor: "#436D9D",
-        borderRadius: 10,
-        paddingVertical: 15,
-        alignItems: 'center',
-        flex: 1, // 버튼이 공간을 차지하도록
     },
     writeButton: {
         backgroundColor: '#436D9D',
@@ -201,11 +158,19 @@ export const styles = StyleSheet.create({
         fontFamily: 'PretendardGOV-Bold',
         fontSize: 14,
     },
-    headerContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 10,
+    inputField: {
+        backgroundColor: 'white',
+        borderRadius: 10,
+        borderWidth: 1,
+        borderColor: '#ddd',
+        padding: 15,
+        fontSize: 16,
+        marginBottom: 15,
+        fontFamily: 'PretendardGOV-Regular',
+    },
+    contentField: {
+        height: 200,
+        textAlignVertical: 'top',
     },
     noticeTypeSelector: {
         marginTop: 20,
@@ -216,6 +181,7 @@ export const styles = StyleSheet.create({
         fontWeight: 'bold',
         color: '#333',
         marginBottom: 10,
+        fontFamily: 'PretendardGOV-Bold',
     },
     typeButtonContainer: {
         flexDirection: 'row',
@@ -227,6 +193,7 @@ export const styles = StyleSheet.create({
         borderRadius: 20,
         borderWidth: 1,
         borderColor: '#ccc',
+        backgroundColor: '#fff',
     },
     typeButtonActive: {
         backgroundColor: '#436D9D',
@@ -235,10 +202,33 @@ export const styles = StyleSheet.create({
     typeButtonText: {
         fontSize: 14,
         color: '#555',
+        fontFamily: 'PretendardGOV-Regular',
     },
     typeButtonTextActive: {
         color: '#fff',
         fontWeight: 'bold',
+        fontFamily: 'PretendardGOV-Bold',
     },
     
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 20,
+    },
+    modalButton: {
+        backgroundColor: "#436D9D",
+        borderRadius: 10,
+        paddingVertical: 15,
+        alignItems: 'center',
+        flex: 1,
+    },
+    cancelButton: {
+        backgroundColor: '#888',
+        marginRight: 10,
+    },
+    modalButtonText: {
+        color: 'white',
+        fontSize: 16,
+        fontFamily: 'PretendardGOV-Bold',
+    },
 });

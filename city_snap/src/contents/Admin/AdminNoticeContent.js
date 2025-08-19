@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, Alert } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons"; 
 import { styles } from "../../style/NoticeBoardStyle";
 import { API_BASE_URL } from "../../utils/config";
 import AdminNoticeWrite from "./AdminNoticeWrite"; 
@@ -12,14 +12,11 @@ export default function AdminNoticeContent() {
   const [selectedNotice, setSelectedNotice] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // '글쓰기' 또는 '수정하기' 모드를 관리하는 상태
   const [isWriteMode, setIsWriteMode] = useState(false); 
-  // 수정할 공지 데이터를 임시 저장할 상태
   const [editingNotice, setEditingNotice] = useState(null); 
 
-  const PAGE_SIZE = 4;
+  const PAGE_SIZE = 6;
 
-  // 공지사항 목록을 불러오는 함수
   const fetchNotices = useCallback(() => {
     setLoading(true);
     fetch(`${API_BASE_URL}/get_notices`)
@@ -39,7 +36,6 @@ export default function AdminNoticeContent() {
     fetchNotices();
   }, [fetchNotices]);
 
-  // 공지사항 삭제 처리 함수
   const handleDelete = (id) => {
     Alert.alert("공지사항 삭제", "정말로 이 공지사항을 삭제하시겠습니까?", [
       { text: "취소", style: "cancel" },
@@ -66,18 +62,16 @@ export default function AdminNoticeContent() {
     ]);
   };
 
-  // 글쓰기 또는 수정이 완료되었을 때 호출되는 함수
   const handleSubmission = () => {
-    setIsWriteMode(false); // 작성/수정 화면 닫기
-    setEditingNotice(null); // 수정 데이터 초기화
-    fetchNotices();       // 최신 목록으로 새로고침
+    setIsWriteMode(false);
+    setEditingNotice(null);
+    fetchNotices();
   };
   
-  // 'isWriteMode'가 true이면, '글쓰기' 또는 '수정' 화면을 렌더링
   if (isWriteMode) {
     return (
       <AdminNoticeWrite 
-        initialData={editingNotice} // '수정' 시 기존 데이터를 전달, '글쓰기' 시 null 전달
+        initialData={editingNotice}
         onCancel={() => { setIsWriteMode(false); setEditingNotice(null); }} 
         onSubmited={handleSubmission} 
       />
@@ -89,17 +83,16 @@ export default function AdminNoticeContent() {
   const totalPages = Math.ceil(normalNotices.length / PAGE_SIZE);
   const pagedNotices = normalNotices.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // 공지사항 목록 아이템 렌더링 함수
   const renderNoticeItem = (item) => {
-    const icon = item.type === 0 ? "warning" : item.type === 1 ? "information-circle" : "checkmark-circle";
-    const iconColor = item.type === 0 ? "#c91515" : item.type === 1 ? "#436D9D" : "#008000";
+    const icon = item.type === 0 ? "alert-triangle" : item.type === 1 ? "info" : "check-circle";
+    const iconColor = item.type === 0 ? "#FF6B6B" : item.type === 1 ? "#5D8BFF" : "#4CAF50";
     return (
       <TouchableOpacity 
         key={item.id} 
         style={styles.noticeBox} 
         onPress={() => { setSelectedNotice(item); setVisible(true); }}
       >
-        <Ionicons name={icon} size={24} color={iconColor} style={{ marginRight: 10 }} />
+        <Feather name={icon} size={24} color={iconColor} style={{ marginRight: 15 }} />
         <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <Text style={styles.noticeTitle} numberOfLines={1}>{item.title}</Text>
           <Text style={styles.noticeDate}>{item.notice_date}</Text> 
@@ -142,36 +135,42 @@ export default function AdminNoticeContent() {
         <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
+
+
+              <TouchableOpacity style={styles.modalCloseIcon} onPress={() => setVisible(false)}>
+                  <Feather name="x" size={28} color="#888" />
+              </TouchableOpacity>
+
               <View style={styles.modalContentHeader}>
-                <Text style={styles.modalTitle}>{selectedNotice.title}</Text>
-                <Text style={styles.modalDate}>{selectedNotice.date}</Text>
+                <Text style={styles.modalTitle} numberOfLines={2}>{selectedNotice.title}</Text>
               </View>
+              <Text style={styles.modalDate}>{selectedNotice.date}</Text>
+              
               <ScrollView style={styles.modalScrollView}>
                 <Text style={styles.modalContentText}>{selectedNotice.content}</Text>
               </ScrollView>
 
-              <View style={styles.buttonRow}>
-                <TouchableOpacity 
-                  style={styles.modalButton} 
-                  onPress={() => {
-                    setEditingNotice(selectedNotice); // 수정할 데이터 저장
-                    setVisible(false);                // 상세 모달 닫기
-                    setIsWriteMode(true);             // 글쓰기/수정 화면 열기
-                  }}
-                >
-                  <Text style={styles.modalButtonText}>수정</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modalButton, styles.deleteButton]}
-                  onPress={() => handleDelete(selectedNotice.id)}
-                >
-                  <Text style={styles.modalButtonText}>삭제</Text>
-                </TouchableOpacity>
-              </View>
 
-              <TouchableOpacity style={styles.modalCloseButton} onPress={() => setVisible(false)}>
-                <Text style={styles.modalButtonText}>닫기</Text>
-              </TouchableOpacity>
+              <View style={styles.modalButtonRow}>
+                  <TouchableOpacity 
+                    style={[styles.modalActionButton, styles.modalEditButton]} 
+                    onPress={() => {
+                      setEditingNotice(selectedNotice);
+                      setVisible(false);
+                      setIsWriteMode(true);
+                    }}
+                  >
+                    <Feather name="edit" size={18} color="white" />
+                    <Text style={styles.modalButtonText}>수정</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalActionButton, styles.modalDeleteButton]}
+                    onPress={() => handleDelete(selectedNotice.id)}
+                  >
+                    <Feather name="trash-2" size={18} color="white" />
+                    <Text style={styles.modalButtonText}>삭제</Text>
+                  </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
