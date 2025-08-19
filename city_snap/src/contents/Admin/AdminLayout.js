@@ -19,11 +19,17 @@ export default function AdminLayout({ route }) {
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      navigation.goBack();
-      return true;
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return true; // 뒤로가기 동작 처리 완료
+      } else {
+        navigation.navigate("AdminMainScreen"); 
+        return true; // 기본 화면으로 이동 처리 완료
+      }
     });
-    return () => backHandler.remove();
-  }, []);
+
+  return () => backHandler.remove();
+}, [navigation]);
 
   return (
     <>

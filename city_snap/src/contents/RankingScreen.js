@@ -5,59 +5,77 @@ import jwt_decode from 'jwt-decode';
 import { API_BASE_URL } from '../utils/config';
 import { styles } from '../style/RankingStyle';
 import { useFocusEffect } from '@react-navigation/native';
-import { getTokens } from '../auth/authStorage'
+import { getTokens } from '../auth/authStorage';
 
 export default function RankingScreen() {
   const [userInfo, setUserInfo] = useState(null);
   const [ranking, setRanking] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [myRanking, setMyRanking] = useState(null)
+  const [myRanking, setMyRanking] = useState(null);
 
   // 페이지 접근 시 순위표 reload
   useFocusEffect(
-      useCallback(() => {
-        // 사용자 정보 로드
-        const loadUserInfo = async () => {
+    useCallback(() => {
+      const loadData = async () => {
+        setLoading(true);
+        try {
+          // 1. 사용자 정보 로드
           const { access } = await getTokens();
-          if (access){
-            try{
-              const decoded = jwt_decode(access);
-              setUserInfo(decoded);
+          let decodedUser = null;
+          if (access) {
+            try {
+              decodedUser = jwt_decode(access);
+              setUserInfo(decodedUser);
             } catch (error) {
               console.error('토큰 디코딩 오류:', error);
+              setUserInfo(null);
             }
           }
-        };
-        loadUserInfo();
+
+          if (!decodedUser?.user_id) {
+            setLoading(false);
+            return;
+          }
+
+          // 2. 서버에서 랭킹 데이터 가져오기
+          const res = await fetch(`${API_BASE_URL}/account.ranking?user_id=${decodedUser.user_id}`);
+          const data = await res.json();
+          
+          let parsed;
+          if (typeof data === 'string') {
+            parsed = JSON.parse(data);
+          } else {
+            parsed = data;
+          }
+
+          setMyRanking(parsed.myRanking);
+          const newRanking = parsed.ranking || [];
+          setRanking(newRanking);
+
+          // 💡 현재 로그인한 사용자의 최신 점수로 userInfo 업데이트
+          const updatedUserInfo = newRanking.find(item => item.user_id === decodedUser.user_id);
+          if (updatedUserInfo) {
+            setUserInfo(prevInfo => ({
+              ...prevInfo,
+              score: updatedUserInfo.score
+            }));
+          }
+
+        } catch (e) {
+          console.error("랭킹 데이터 로드 실패:", e);
+          setRanking([]);
+          setMyRanking(null);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      loadData();
     }, [])
   );
 
-  useEffect(() => {
-
-    if (!userInfo?.user_id) return;
-
-    // 서버에서 랭킹 데이터 가져오기
-    fetch(`${API_BASE_URL}/account.ranking?user_id=${userInfo.user_id}`)
-      .then((response) => response.json())
-      .then(data => {
-        let parsed;
-        if (typeof data === 'string') {
-          parsed = JSON.parse(data);
-        } else {
-          parsed = data;
-        }
-        // 현재 사용자의 랭킹
-        setMyRanking(parsed.myRanking);
-        // 전체 중 100명까지의 랭킹
-        setRanking(parsed.ranking || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, [userInfo]);
-
   // 랭킹 아이템 렌더링 함수
   const renderItem = ({ item, index }) => {
-
     // 1,2,3등 왕관 추가
     let crownColor = null;
     if (item.rank === 1) crownColor = '#FFD700';

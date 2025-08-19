@@ -1,4 +1,9 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Dimensions } from 'react-native';
+
+// 화면 너비 가져오기
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const micButtonSize = SCREEN_WIDTH * 0.5;
+export const micIconSize = micButtonSize * 0.5;
 
 const shadow = {
   shadowColor: 'black',
@@ -171,20 +176,20 @@ export const styles = StyleSheet.create({
   },
 
   micButton: {
-    width: 200,
-    height: 200,
+    width: micButtonSize,
+    height: micButtonSize,
     backgroundColor: "#7ED8C2",
-    borderRadius: 100,
+    borderRadius: micButtonSize / 2,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     marginVertical: 20,
   },
-    micRecordingButton: {
-    width: 200,
-    height: 200,
+  micRecordingButton: {
+    width: micButtonSize,
+    height: micButtonSize,
     backgroundColor: "#07ef60ff",
-    borderRadius: 100,
+    borderRadius: micButtonSize / 2,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -193,22 +198,22 @@ export const styles = StyleSheet.create({
 
   voiceDescription: {
     textAlign:'center',
-    fontSize: 22,
+    fontSize: SCREEN_WIDTH * 0.05,
     color: "black",
     fontFamily: 'PretendardGOV-Bold',
     marginBottom: 10,
-    },
+  },
 
-    voiceModal: {
-      backgroundColor: 'white',
-      borderRadius: 16,
-      padding: 24,
-      width: '80%',
-      alignSelf: 'center',        
-      alignItems: 'center',       
-      justifyContent: 'center',   
-    },
-    voiceModalButton:{
+  voiceModal: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 24,
+    width: '80%',
+    alignSelf: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  voiceModalButton:{
     backgroundColor: "#E0E0E0",
     borderRadius: 20,
     marginTop: 100,
@@ -216,18 +221,17 @@ export const styles = StyleSheet.create({
     height: 35,
     alignItems: 'center',
     paddingVertical: 4,
-    
-    },
-    voiceModalText:{
-      fontSize: 17,
-      color: "black",
-      fontFamily: 'PretendardGOV-Bold'
-    },
-    backButton: {
-        position: 'absolute',
-        top: 60, // 상단 위치
-        right: 10, // 좌측 위치
-        zIndex: 10, // 다른 요소들 위에 오도록 z-index 설정
-        padding: 10, // 터치 영역 확장
-    },
-  });
+  },
+  voiceModalText:{
+    fontSize: 17,
+    color: "black",
+    fontFamily: 'PretendardGOV-Bold'
+  },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    right: 10,
+    zIndex: 10,
+    padding: 10,
+  },
+});
