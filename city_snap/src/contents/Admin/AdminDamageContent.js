@@ -107,8 +107,11 @@ export default function AdminDamageContent() {
       if (res.ok && (Array.isArray(data.result) || Array.isArray(data))) {
         const rows = Array.isArray(data.result) ? data.result : data;
         const filtered = rows.filter(
-          (loc) => String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"
+          (loc) => 
+            String(loc.IS_NORMAL ?? loc.is_normal) === "0" && 
+            String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"  // is_normal이 0이고 repair_status가 0인 것을 동시에 만족시키는 것만 
         );
+        console.log(filtered)
         setDamageLocations(ensureUiFields(filtered));
         return true;
       }

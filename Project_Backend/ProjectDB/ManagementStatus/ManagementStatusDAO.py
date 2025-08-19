@@ -107,55 +107,6 @@ class ManagementStatusDAO:
         except Exception:
             return str(v) if v else None
 
-    # --- ❶ 지도(핀)용 목록: Reports에서 필요한 필드 + AI 결과 ---
-    def getAllDamageReportLocations(self):
-        h = {"Access-Control-Allow-Origin": "*"}
-        con, cur = None, None
-        try:
-            con, cur = SsyDBManager.makeConCur()
-            sql = """
-                SELECT
-                    report_id,
-                    latitude,
-                    longitude,
-                    location_description,
-                    details,
-                    photo_url,
-                    report_date,
-                    ruser_id,
-                    repair_status,
-                    ai_status,
-                    caption_en,
-                    caption_ko,
-                    mask_url
-                FROM Reports r
-                WHERE r.latitude IS NOT NULL AND r.longitude IS NOT NULL
-                ORDER BY r.report_date DESC
-            """
-            cur.execute(sql)
-            rows = cur.fetchall()
-            result: List[Dict[str, Any]] = []
-            for r in rows:
-                result.append({
-                    "report_id": r[0],
-                    "latitude": r[1],
-                    "longitude": r[2],
-                    "location_description": r[3],
-                    "details": self._lob_to_text(r[4]),
-                    "photo_url": r[5],
-                    "report_date": self._dt2str(r[6]),
-                    "user_id": r[7],
-                    "repair_status": int(r[8]) if r[8] is not None else 0,
-                    "ai_status": r[9],
-                    "caption_en": self._lob_to_text(r[10]),
-                    "caption_ko": self._lob_to_text(r[11]),
-                    "mask_url": r[12],
-                })
-            return JSONResponse(result, headers=h)
-        except Exception as e:
-            return JSONResponse({"error": str(e)}, headers=h, status_code=500)
-        finally:
-            if cur: SsyDBManager.closeConCur(con, cur)
 
     # --- ❶ 지도(핀)용 목록: Reports에서 필요한 필드 + AI 결과 ---
     def getAllDamageReportLocations(self):
@@ -177,7 +128,8 @@ class ManagementStatusDAO:
                     r.ai_status,        -- 추가
                     r.caption_en,       -- 추가 (CLOB)
                     r.caption_ko,       -- 추가 (CLOB)
-                    r.mask_url          -- 추가
+                    r.mask_url,           -- 추가
+                    r.is_normal
                 FROM Reports r
                 WHERE r.latitude IS NOT NULL AND r.longitude IS NOT NULL
                 ORDER BY r.report_date DESC
@@ -200,6 +152,7 @@ class ManagementStatusDAO:
                     "caption_en": self._lob_to_text(r[10]),
                     "caption_ko": self._lob_to_text(r[11]),
                     "mask_url": r[12],
+                    "is_normal":r[13]
                 })
             return JSONResponse(result, headers=h)
         except Exception as e:
