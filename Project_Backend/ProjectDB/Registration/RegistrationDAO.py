@@ -526,6 +526,7 @@ class RegistrationDAO:
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
+            
             cur.execute("""
                 UPDATE Reports
                    SET ai_status = :st,
@@ -540,6 +541,12 @@ class RegistrationDAO:
                 "murl": mask_url,
                 "rid": report_id
             })
+            # ai_status가 '정상'으로 끝나면 is_normal을 1로 변경
+            if ai_status and ai_status.strip().endswith("정상"):
+                cur.execute("""
+                    UPDATE Reports SET is_normal=1 WHERE report_id=:rid
+                """, {"rid": report_id})
+            
             con.commit()
         except Exception as e:
             if con: con.rollback()

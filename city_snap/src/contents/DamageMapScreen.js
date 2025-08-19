@@ -281,8 +281,7 @@ export default function DamageMapScreen() {
                       imageSlider.innerHTML = '<div style="text-align:center; width:100%; padding: 20px 0; color: #868e96;">표시할 이미지가 없습니다.</div>';
                   }
 
-                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, '위치', location.address);
-                  document.getElementById('details-info').innerHTML = createInfoItem(ICONS.location, '신고 내용', location.details);
+                  document.getElementById('address-info').innerHTML = createInfoItem(ICONS.location, location.address, location.details);
                   document.getElementById('date-info').innerHTML = createInfoItem(ICONS.calendar, '신고 날짜', location.date);
                   document.getElementById('user-info').innerHTML = createInfoItem(ICONS.user, '신고자', location.nickname);
                   document.getElementById('status-info').innerHTML = createInfoItem(ICONS.status, '현재 상태', location.status_text);
@@ -311,6 +310,23 @@ export default function DamageMapScreen() {
 
   return (
     <View style={styles.container}>
+      <View 
+        style={{
+          paddingTop: 15,
+          height: '10%', backgroundColor: '#436D9D',
+          flexDirection: 'row', alignItems: 'center',
+          justifyContent: 'space-between', paddingHorizontal: 16
+        }}
+      >
+        <Text 
+          style={{
+            color: '#F9F9F9', fontSize: 25,
+            fontFamily: 'PretendardGOV-ExtraBold'
+          }}
+        >
+          City Snap
+        </Text>
+      </View>
       {damageLocations.length > 0 ? (
         <WebView
           originWhitelist={["*"]}
@@ -349,7 +365,7 @@ const styles = StyleSheet.create({
   noDataContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   noDataText: { fontSize: 18, color: "#555" },
   webView: { flex: 1 },
-  closeButtonContainer: { position: "absolute", top: 50, right: 20, zIndex: 100 },
+  closeButtonContainer: { position: "absolute", top: '4.5%', right: 20, zIndex: 100 },
   closeMapButton: {
     backgroundColor: "rgba(0,0,0,0.6)",
     paddingVertical: 8,
