@@ -4,19 +4,18 @@ import {
   View,
   Text,
   ActivityIndicator,
-  FlatList,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   StyleSheet,
   Platform,
 } from "react-native";
+import { GestureHandlerRootView, FlatList as GHFlatList } from "react-native-gesture-handler";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { apiFetch } from "../auth/api";
 import { getTokens } from "../auth/authStorage";
 import jwt_decode from "jwt-decode";
 
-const POPUP_WIDTH = 360;  // 고정 폭
-const POPUP_HEIGHT = 260; // 고정 높이 (원하는 값으로 변경)
+const POPUP_WIDTH = 360;
+const POPUP_HEIGHT = 260;
 
 export default function NotificationsPopover({ visible, onClose }) {
   const [items, setItems] = useState([]);
@@ -49,63 +48,55 @@ export default function NotificationsPopover({ visible, onClose }) {
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      {/* 배경 눌러도 안 닫히게 고정하려면 onPress 제거, 배경 눌러 닫히게 하려면 onPress={onClose} 추가 */}
-      <TouchableWithoutFeedback /* onPress={onClose} */>
-        <View style={S.overlay}>
-          <TouchableWithoutFeedback>
-            <View style={[S.card, { width: POPUP_WIDTH, height: POPUP_HEIGHT }]}>
-              {/* 헤더 */}
-              <View style={S.header}>
-                <Text style={S.title}>알림</Text>
-                <View style={S.headerActions}>
-                  <TouchableOpacity onPress={load} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="refresh" size={18} color="#436D9D" />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                    <Ionicons name="close" size={20} color="#999" />
-                  </TouchableOpacity>
-                </View>
+      {/* Modal은 독립 트리라 제스처 루트를 다시 만들어줘야 함 */}
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={S.overlay} pointerEvents="box-none">
+          <View
+            style={[S.card, { width: POPUP_WIDTH, height: POPUP_HEIGHT }]}
+            onStartShouldSetResponderCapture={() => false}
+          >
+            {/* 헤더 */}
+            <View style={S.header}>
+              <Text style={S.title}>알림</Text>
+              <View style={S.headerActions}>
+                <TouchableOpacity onPress={load} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="refresh" size={18} color="#436D9D" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <Ionicons name="close" size={20} color="#999" />
+                </TouchableOpacity>
               </View>
-
-              {/* 컨텐츠: 고정 높이 내에서만 스크롤 */}
-              {loading ? (
-                <View style={S.center}>
-                  <ActivityIndicator />
-                </View>
-              ) : (
-                <FlatList
-                  data={items}
-                  keyExtractor={(it, idx) => String(it.notification_id ?? idx)}
-                  style={S.list}                       // flex:1 로 카드 안에서만 스크롤
-                  contentContainerStyle={S.listContent}
-                  ItemSeparatorComponent={() => <View style={S.sep} />}
-                  ListEmptyComponent={
-                    <View style={S.empty}>
-                      <Text style={{ color: "#666" }}>알림이 없습니다.</Text>
-                    </View>
-                  }
-                  renderItem={({ item }) => (
-                    <View style={S.item}>
-                      {/* 내용이 길면 줄바꿈되며, 영역은 리스트가 스크롤로 해결 */}
-                      <Text style={S.content}>{item.content}</Text>
-                      <Text style={S.meta}>
-                        {(item.sent_at || "")}
-                      </Text>
-                    </View>
-                  )}
-                  nestedScrollEnabled
-                  keyboardShouldPersistTaps="handled"
-                  showsVerticalScrollIndicator
-                  initialNumToRender={12}
-                />
-              )}
-
-              {/* 푸터 */}
-              
             </View>
-          </TouchableWithoutFeedback>
+
+            {/* 콘텐츠: 고정 높이 내부만 스크롤 */}
+            {loading ? (
+              <View style={S.center}><ActivityIndicator /></View>
+            ) : (
+              <GHFlatList
+                data={items}
+                keyExtractor={(it, idx) => String(it.notification_id ?? idx)}
+                style={S.list}
+                contentContainerStyle={S.listContent}
+                ItemSeparatorComponent={() => <View style={S.sep} />}
+                ListEmptyComponent={
+                  <View style={S.empty}><Text style={{ color: "#666" }}>알림이 없습니다.</Text></View>
+                }
+                renderItem={({ item }) => (
+                  <View style={S.item}>
+                    <Text style={S.content}>{item.content}</Text>
+                    <Text style={S.meta}>{item.sent_at || ""}</Text>
+                  </View>
+                )}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="always"
+                showsVerticalScrollIndicator
+                scrollEventThrottle={16}
+                bounces
+              />
+            )}
+          </View>
         </View>
-      </TouchableWithoutFeedback>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
@@ -139,7 +130,7 @@ const S = StyleSheet.create({
   headerActions: { flexDirection: "row", alignItems: "center", gap: 12 },
   title: { fontSize: 16, fontWeight: "700", color: "#222" },
 
-  list: { flex: 1 },                 // 고정 높이 내에서 차지하고 스크롤
+  list: { flex: 1 },
   listContent: { paddingBottom: 8 },
   sep: { height: 1, backgroundColor: "#eee" },
   item: { paddingVertical: 10 },
@@ -148,12 +139,4 @@ const S = StyleSheet.create({
 
   empty: { paddingVertical: 24, alignItems: "center" },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-
-  footerCloseBtn: {
-    marginTop: 8,
-    alignSelf: "flex-end",
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-  },
-  footerCloseText: { color: "#436D9D", fontWeight: "600", fontSize: 13 },
 });
