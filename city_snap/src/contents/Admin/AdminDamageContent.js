@@ -7,7 +7,8 @@ import { appEvents, EVENTS } from "../../utils/eventBus";
 // 개발용 목업 데이터 사용 여부 (실제 API를 사용하려면 false로 설정)
 const USE_MOCK_ONLY = false;
 // 분석된 이미지가 없을 경우 임시 이미지 사용 여부
-const USE_PLACEHOLDER_ANALYZED = true;
+// 조회 API: AI 필드(ai_status, caption_ko, mask_url)를 포함하는 엔드포인트 사용
+const REPORTS_API = `${API_BASE_URL}/management.reports`; // ⭐ 중요
 
 export default function AdminDamageContent() {
   const [damageLocations, setDamageLocations] = useState([]);
@@ -60,32 +61,46 @@ export default function AdminDamageContent() {
     };
   }, []);
 
-  // 데이터에 UI 표시에 필요한 필드를 추가/가공하는 함수
+  // 경로 정리 유틸
+  const normalizePath = (p) =>
+    String(p || "").replace(/\\/g, "/").replace(/^\.?\//, "");
+  const toHttpUrl = (p) => {
+    const s = normalizePath(p);
+    if (!s) return null;
+    return s.startsWith("http") ? s : `${API_BASE_URL}/${s}`;
+  };
+  const trimLeadingSlash = (f) => String(f || "").replace(/^\//, "");
+
   const ensureUiFields = (list) =>
     (list || []).map((loc) => {
       const repairStatus = Number(loc.REPAIR_STATUS ?? loc.repair_status ?? 0);
+      const hasMask = !!loc.mask_url;
+      const analyzedUrl = hasMask
+        ? toHttpUrl(loc.mask_url)                        // ⭐ DB의 analysis_photo\*.png → http URL로
+        : `${API_BASE_URL}/mask_images/no_mask_image.png`; // ⭐ 마스크 없을 땐 플레이스홀더
+
+      const aiText = hasMask
+        ? (loc.ai_status || "AI 결과 없음")              // ⭐ 마스크 있으면 ai_status
+        : (loc.caption_ko || loc.ai_status || "AI 결과 없음"); // ⭐ 없으면 caption_ko
+
       return {
         ...loc,
         REPAIR_STATUS: repairStatus,
         status_text: repairStatus === 0 ? "파손 - 수리대기중" : "수리완료",
-        // AI 분석 결과 텍스트 (실제 데이터 필드에 맞게 수정 필요)
-        ai_result_text:
-          loc.ai_result_text ||
-          "AI가 연석의 모서리 부분에서 파손 및 균열을 감지했습니다.",
-        analyzed_photo_url:
-          loc.analyzed_photo_url ??
-          (USE_PLACEHOLDER_ANALYZED
-            ? `https://picsum.photos/seed/analyzed-${
-                loc.report_id || Math.random()
-              }/800/600`
-            : null),
+        ai_result_text: aiText,                           // ⭐ 상세 패널 텍스트 용
+        analyzed_photo_url: analyzedUrl,                  // ⭐ 슬라이더의 AI 분석 이미지 URL
+        _photo_url_http: `${API_BASE_URL}/registration_photos/${trimLeadingSlash(loc.photo_url)}`, // 편의 필드
+        // 아래 3개는 상세 패널 표시용 안전 필드
+        _address: loc.location_description || "주소 정보 없음",
+        _date: loc.report_date || loc.date || "날짜 정보 없음",
+        _nickname: loc.user_id || loc.nickname || "익명",
       };
     });
 
   // API로부터 파손 위치 데이터를 가져오는 함수
   const fetchDamageLocations = async () => {
     try {
-      const res = await fetch(`${API_BASE_URL}/get_all_damage_reports`, {
+      const res = await fetch(REPORTS_API, {  // ⭐ AI 필드 포함 응답 사용
         headers: { "Cache-Control": "no-cache" },
       });
       const data = await res.json();
@@ -109,36 +124,32 @@ export default function AdminDamageContent() {
       (locations || []).map((loc) => {
         const images = [];
 
-        // 원본 이미지 추가
-        if (loc.photo_url) {
-          images.push({
-            type: "원본",
-            url: `${API_BASE_URL}/registration_photos/${String(
-              loc.photo_url
-            ).replace(/^\//, "")}`,
-          });
+        // 항상 '원본' 추가
+        if (loc._photo_url_http) {
+          images.push({ type: "원본", url: loc._photo_url_http });
         }
-
-        // AI 분석 이미지 추가
-        const analyzedPhotoUrl = loc.analyzed_photo_url;
-        if (analyzedPhotoUrl) {
-          images.push({
-            type: "AI 분석",
-            url: String(analyzedPhotoUrl).startsWith("http")
-              ? analyzedPhotoUrl
-              : `${API_BASE_URL}/analysis_photos/${String(
-                  analyzedPhotoUrl
-                ).replace(/^\//, "")}`,
-          });
-        }
+        // 항상 'AI 분석' 추가 (마스크 없으면 no_mask_image.png로 대체)
+        images.push({
+          type: "AI 분석",
+          url: loc.analyzed_photo_url, // 이미 http URL 상태
+        });
 
         return {
           lat: Number(loc.latitude),
           lng: Number(loc.longitude),
-          address: loc.address || "주소 정보 없음",
+          // ⭐ 주소/날짜/닉네임을 '확실한' 키로 생성 + 폴백
+          address: loc._address
+            || loc.location_description
+            || "주소 정보 없음",
           details: loc.details || "상세 내용 없음",
-          date: loc.date || "날짜 정보 없음",
-          nickname: loc.nickname || "익명",
+          date: loc._date
+            || loc.report_date
+            || loc.date
+            || "날짜 정보 없음",
+          nickname: loc._nickname
+            || loc.user_id
+            || loc.nickname
+            || "익명",
           images: images,
           status_text: loc.status_text,
           ai_result_text: loc.ai_result_text,
@@ -185,6 +196,15 @@ export default function AdminDamageContent() {
               .ai-section .label { color: #1864ab; font-weight: 700; }
               .ai-section .value { color: #1c7ed6; }
           </style>
+          <script>
+            // ⭐ WebView에서 오류 보이도록
+            window.onerror = function(msg, src, line, col, err){
+              const el = document.createElement('div');
+              el.style.cssText='position:absolute;top:8px;left:8px;z-index:9999;background:#ffe3e3;color:#c92a2a;padding:6px 8px;border-radius:6px;font:12px/1.2 -apple-system,Roboto,Segoe UI,Helvetica;';
+              el.textContent = 'JS Error: ' + msg;
+              document.body.appendChild(el);
+            };
+          </script>
           <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
       </head>
       <body>
@@ -250,6 +270,8 @@ export default function AdminDamageContent() {
                       markers.push(marker);
                   });
               }
+              // 반드시 전역 바인딩(callback=initMap 이것을 찾음)
+              window.initMap = initMap;
 
               function esc(str) { if (!str) return ""; return String(str).replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
               
