@@ -19,7 +19,8 @@ class RegistrationDAO:
         1) 사진 저장
         2) Reports INSERT (RETURNING report_id)  ← repair_status=0 명시
         3) 같은 트랜잭션에서 Maintenance_Status INSERT('접수')
-        4) 실패 시 롤백 + 파일 삭제
+        4) 같은 트랜잭션에서 Users(또는 Accounts) 점수 +1  
+        5) 실패 시 롤백 + 파일 삭제
         """
         h = {"Access-Control-Allow-Origin": "*"}
         con, cur = None, None
@@ -65,50 +66,68 @@ class RegistrationDAO:
                     print(f"ERROR: {error_msg}")
                     return JSONResponse({"result": "신고 실패", "error": error_msg}, status_code=400, headers=h)
 
-            # is_normal: 0=파손(기본), 1=정상
-            is_normal = 0
-            # repair_status: 0=대기(기본), 1=완료
-            repair_status = 0
+            is_normal = 0   # 0=파손
+            repair_status = 0  # 0=대기
 
-            # Reports INSERT + RETURNING
-            rid = cur.var(oracledb.NUMBER)
+            # RETURNING용 바인드 변수 (권장 타입 상수 사용)
+            out_report_id = cur.var(oracledb.DB_TYPE_NUMBER)
+
+            # 컬럼명과 다른 바인드 이름 사용 (p_*, out_*)
             sql_reports = """
                 INSERT INTO Reports (
                     user_id, photo_url, location_description, latitude, longitude,
                     report_date, details, is_normal, repair_status
                 ) VALUES (
-                    :user_id, :photo_url, :location_description, :latitude, :longitude,
-                    :report_date, :details, :is_normal, :repair_status
+                    :p_user_id, :p_photo_url, :p_location_description, :p_latitude, :p_longitude,
+                    :p_report_date, :p_details, :p_is_normal, :p_repair_status
                 )
-                RETURNING report_id INTO :rid
+                RETURNING report_id INTO :out_report_id
             """
             cur.execute(sql_reports, {
-                'user_id': user_id,
-                'photo_url': photo_url_for_db,
-                'location_description': location_description,
-                'latitude': latitude,
-                'longitude': longitude,
-                'report_date': parsed_report_date,
-                'details': details,
-                'is_normal': is_normal,
-                'repair_status': repair_status,
-                'rid': rid
+                "p_user_id": user_id,
+                "p_photo_url": photo_url_for_db,
+                "p_location_description": location_description,
+                "p_latitude": latitude,
+                "p_longitude": longitude,
+                "p_report_date": parsed_report_date,
+                "p_details": details,
+                "p_is_normal": is_normal,
+                "p_repair_status": repair_status,
+                "out_report_id": out_report_id,
             })
-            report_id = int(rid.getvalue()[0])
+            report_id = int(out_report_id.getvalue()[0])
 
             # Maintenance_Status INSERT (초기 상태 '접수')
             sql_ms = """
                 INSERT INTO Maintenance_Status (
                     status_id, report_id, current_status, damage_info_details, facility_type, manager_nickname, manager_comments, last_updated_date
                 ) VALUES (
-                    maintenance_status_seq.NEXTVAL, :report_id, '접수', NULL, NULL, NULL, NULL, SYSTIMESTAMP
+                    maintenance_status_seq.NEXTVAL, :p_report_id, '접수', NULL, NULL, NULL, NULL, SYSTIMESTAMP
                 )
             """
-            cur.execute(sql_ms, {"report_id": report_id})
+            cur.execute(sql_ms, {"p_report_id": report_id})
+
+            # 신고 성공 시 사용자 점수 +1 (동일 트랜잭션)
+            # USERS 테이블이 실제 테이블인 것이 맞다고 하셨으므로 그대로 사용
+            cur.execute("""
+                UPDATE USERS
+                SET SCORE = NVL(SCORE, 0) + 1
+                WHERE USER_ID = :p_uid
+            """, {"p_uid": user_id})
+
+            # 변경된 점수 조회
+            cur.execute("SELECT NVL(SCORE, 0) FROM USERS WHERE USER_ID = :p_uid", {"p_uid": user_id})
+            row = cur.fetchone()
+            new_score = int(row[0]) if row and row[0] is not None else None
 
             con.commit()
-            print("INFO: 신고 등록 + 상태 초기화 커밋 성공.")
-            return JSONResponse({"result": "신고 등록 성공", "report_id": report_id, "photo_url": photo_url_for_db}, status_code=200, headers=h)
+            print("INFO: 신고 등록 + 상태 초기화 + 점수 반영 커밋 성공.")
+            return JSONResponse({
+                "result": "신고 등록 성공",
+                "report_id": report_id,
+                "photo_url": photo_url_for_db,
+                "new_score": new_score
+            }, status_code=200, headers=h)
 
         except Exception as e:
             if con:
@@ -146,7 +165,7 @@ class RegistrationDAO:
                     r.report_date,
                     r.details,
                     r.is_normal,
-                    r.repair_status,          -- 추가
+                    r.repair_status,
                     m.status_id,
                     m.current_status,
                     m.manager_nickname,
@@ -181,8 +200,8 @@ class RegistrationDAO:
                     "longitude": r[5],
                     "report_date": dt2str(r[6]),
                     "details": lob_to_text(r[7]),
-                    "is_normal": int(r[8]) if r[8] is not None else None,   # 0=파손,1=정상
-                    "repair_status": int(r[9]) if r[9] is not None else 0,  # 0=대기,1=완료
+                    "is_normal": int(r[8]) if r[8] is not None else None,
+                    "repair_status": int(r[9]) if r[9] is not None else 0,
                     "maintenance": {
                         "status_id": r[10],
                         "current_status": r[11],
@@ -208,7 +227,7 @@ class RegistrationDAO:
             con, cur = SsyDBManager.makeConCur()
             sql = """
             SELECT r.report_id, r.latitude, r.longitude, r.location_description,
-                   r.details, r.photo_url, r.report_date, r.user_id, r.repair_status  -- 추가
+                   r.details, r.photo_url, r.report_date, r.user_id, r.repair_status
             FROM Reports r
             WHERE r.latitude IS NOT NULL AND r.longitude IS NOT NULL
             ORDER BY r.report_date DESC
@@ -234,7 +253,7 @@ class RegistrationDAO:
                     "photo_url": row[5],
                     "date": row[6].strftime("%Y-%m-%d") if row[6] else "날짜 없음",
                     "nickname": row[7] or "익명",
-                    "repair_status": int(row[8]) if row[8] is not None else 0,  # 0=대기,1=완료
+                    "repair_status": int(row[8]) if row[8] is not None else 0,
                 })
             return processed_results
 
@@ -264,7 +283,7 @@ class RegistrationDAO:
                     r.report_date,
                     r.details,
                     r.is_normal,
-                    r.repair_status,      -- 추가
+                    r.repair_status,
                     m.current_status,
                     m.last_updated_date
                 FROM Reports r
@@ -298,7 +317,7 @@ class RegistrationDAO:
                     "report_date": dt2str(r[6]),
                     "details": lob_to_text(r[7]),
                     "is_normal": int(r[8]) if r[8] is not None else None,
-                    "repair_status": int(r[9]) if r[9] is not None else 0,   # 0=대기,1=완료
+                    "repair_status": int(r[9]) if r[9] is not None else 0,
                     "current_status": r[10],
                     "last_updated_date": dt2str(r[11]),
                 })
@@ -312,7 +331,7 @@ class RegistrationDAO:
                 SsyDBManager.closeConCur(con, cur)
 
     # ----------------------------------------------------------------------
-    # 유저 신고 삭제/단건 조회 (기존 유지)
+    # 유저 신고 삭제/단건 조회
     # ----------------------------------------------------------------------
     def get_report_by_id(self, report_id: int):
         con, cur = None, None
@@ -325,7 +344,6 @@ class RegistrationDAO:
                     "report_id": row[0],
                     "user_id": row[1],
                     "location_description": row[2],
-                    # 필요한 컬럼 추가 가능
                 }
             return None
         except Exception as e:
@@ -339,10 +357,18 @@ class RegistrationDAO:
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
-            cur.execute("DELETE FROM REPORTS WHERE REPORT_ID = :id", {"id": report_id})
+
+            # 1) 자식 테이블 먼저 삭제
+            cur.execute("DELETE FROM Maintenance_Status WHERE report_id = :id", {"id": report_id})
+
+            # 2) 부모 테이블 삭제
+            cur.execute("DELETE FROM Reports WHERE report_id = :id", {"id": report_id})
+
             con.commit()
             return True
         except Exception as e:
+            if con:
+                con.rollback()
             print("삭제 실패:", e)
             return False
         finally:
@@ -378,68 +404,7 @@ class RegistrationDAO:
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
 
-
-    # 1. 관리자용 전체 목록 조회
-    def getAllReportsForAdmin(self):
-        h = {"Access-Control-Allow-Origin": "*"}
-        con, cur = None, None
-        try:
-            con, cur = SsyDBManager.makeConCur()
-            sql = """
-                SELECT report_id, location_description, report_date, user_id, 
-                       is_normal, repair_status, photo_url
-                FROM registrations 
-                ORDER BY report_id DESC
-            """
-            cur.execute(sql)
-            
-            report_list = []
-            for r_id, loc, date, u_id, is_norm, rep_stat, p_url in cur:
-                report_list.append({
-                    "id": r_id,
-                    "location": loc,
-                    "date": date.strftime("%Y-%m-%d"),
-                    "user_id": u_id,
-                    "is_normal": is_norm,
-                    "repair_status": rep_stat,
-                    "photo_url": p_url
-                })
-            return JSONResponse(report_list, headers=h)
-        except Exception as e:
-            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
-        finally:
-            if cur: SsyDBManager.closeConCur(con, cur)
-
-    # 2. 신고 1건의 모든 상세 정보 조회
-    def getReportDetailsById(self, report_id):
-        h = {"Access-Control-Allow-Origin": "*"}
-        con, cur = None, None
-        try:
-            con, cur = SsyDBManager.makeConCur()
-            sql = "SELECT * FROM registrations WHERE report_id = :1"
-            cur.execute(sql, [report_id])
-            # 컬럼 이름 리스트를 가져옵니다.
-            column_names = [desc[0].lower() for desc in cur.description]
-            data = cur.fetchone()
-
-            if data:
-                report_dict = dict(zip(column_names, data))
-                # LOB 및 날짜 타입 처리
-                if report_dict.get('details') and hasattr(report_dict['details'], 'read'):
-                    report_dict['details'] = report_dict['details'].read()
-                if report_dict.get('report_date') and hasattr(report_dict['report_date'], 'strftime'):
-                    report_dict['report_date'] = report_dict['report_date'].strftime("%Y-%m-%d %H:%M:%S")
-                return JSONResponse(report_dict, headers=h)
-            else:
-                return JSONResponse({"error": "Report not found"}, status_code=404, headers=h)
-        except Exception as e:
-            return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
-        finally:
-            if cur: SsyDBManager.closeConCur(con, cur)
-
-
-
-    # 1. 관리자용 전체 목록 조회
+    # (아래 두 개는 프로젝트에 이미 중복 정의가 있었는데, REPORTS 기준 버전만 남기는 것을 권장)
     def getAllReportsForAdmin(self):
         h = {"Access-Control-Allow-Origin": "*"}
         con, cur = None, None
@@ -452,7 +417,6 @@ class RegistrationDAO:
                 ORDER BY REPORT_DATE DESC
             """
             cur.execute(sql)
-            
             report_list = []
             for r_id, loc, date, u_id, is_norm, rep_stat, p_url in cur:
                 report_list.append({
@@ -471,24 +435,18 @@ class RegistrationDAO:
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
 
-    # 2. 신고 1건의 모든 상세 정보 조회
     def getReportDetailsById(self, report_id):
         h = {"Access-Control-Allow-Origin": "*"}
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
-            # --- [수정] 테이블명을 REPORTS로, 컬럼명을 REPORT_ID로 변경 ---
             sql = "SELECT * FROM REPORTS WHERE REPORT_ID = :1"
-            # --------------------------------------------------------
             cur.execute(sql, [report_id])
-            
-            # DB의 대문자 컬럼명을 가져와서 소문자로 변환
             column_names = [desc[0].lower() for desc in cur.description]
             data = cur.fetchone()
 
             if data:
                 report_dict = dict(zip(column_names, data))
-                # LOB 및 날짜 타입 처리
                 if report_dict.get('details') and hasattr(report_dict['details'], 'read'):
                     report_dict['details'] = report_dict['details'].read()
                 if report_dict.get('report_date') and hasattr(report_dict['report_date'], 'strftime'):
@@ -497,13 +455,11 @@ class RegistrationDAO:
             else:
                 return JSONResponse({"error": "Report not found"}, status_code=404, headers=h)
         except Exception as e:
-            # 터미널에 진짜 오류 원인을 출력합니다.
             print(f"ERROR in getReportDetailsById: {e}")
             return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
         finally:
             if cur: SsyDBManager.closeConCur(con, cur)
 
-    # 3. 신고 상태 업데이트 (is_normal, repair_status 동시 변경)
     def updateReportStatuses(self, report_id, is_normal, repair_status):
         h = {"Access-Control-Allow-Origin": "*"}
         con, cur = None, None
@@ -514,7 +470,6 @@ class RegistrationDAO:
                 SET IS_NORMAL = :is_normal, REPAIR_STATUS = :repair_status
                 WHERE REPORT_ID = :report_id
             """
-            # --------------------------------------------------------
             cur.execute(sql, {"is_normal": is_normal, "repair_status": repair_status, "report_id": report_id})
             con.commit()
 
