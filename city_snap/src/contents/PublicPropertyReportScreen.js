@@ -347,7 +347,7 @@ const PublicPropertyReportScreen = () => {
                 value={detail}
                 onChangeText={setDetail}
                 multiline
-                textAlignVertical="top"  // ✅ 안드로이드에서 멀티라인 상단 정렬
+                textAlignVertical="top"  //  안드로이드에서 멀티라인 상단 정렬
                 returnKeyType="done"
                 blurOnSubmit
               />

@@ -1,12 +1,34 @@
 from __future__ import annotations
 import typing as t
 import os
+import decimal
 from datetime import datetime
 import oracledb  # python-oracledb
 from fastapi.responses import JSONResponse
 from ProjectDB.SSY.ssyDBManager import SsyDBManager
 from ProjectDB.SSY.ssyFileNameGenerator import SsyFileNameGenerator
 
+# 모든 컬럼을 일괄 정규화(LOB→str, Datetime→문자열, Decimal→int/float, bytes→str) 해서 반환
+def _normalize_for_json(v):
+    # LOB -> str
+    if hasattr(v, "read"):
+        try:
+            v = v.read()
+        except Exception:
+            v = None
+    # bytes -> utf-8 str
+    if isinstance(v, (bytes, bytearray)):
+        try:
+            v = v.decode("utf-8", errors="ignore")
+        except Exception:
+            v = v.hex()
+    # datetime -> 문자열
+    if isinstance(v, datetime):
+        return v.strftime("%Y-%m-%d %H:%M:%S")
+    # Decimal -> int/float
+    if isinstance(v, decimal.Decimal):
+        return int(v) if v == v.to_integral_value() else float(v)
+    return v
 
 class RegistrationDAO:
     def __init__(self):
@@ -443,22 +465,21 @@ class RegistrationDAO:
             sql = "SELECT * FROM REPORTS WHERE REPORT_ID = :1"
             cur.execute(sql, [report_id])
             column_names = [desc[0].lower() for desc in cur.description]
-            data = cur.fetchone()
+            row = cur.fetchone()
 
-            if data:
-                report_dict = dict(zip(column_names, data))
-                if report_dict.get('details') and hasattr(report_dict['details'], 'read'):
-                    report_dict['details'] = report_dict['details'].read()
-                if report_dict.get('report_date') and hasattr(report_dict['report_date'], 'strftime'):
-                    report_dict['report_date'] = report_dict['report_date'].strftime("%Y-%m-%d %H:%M:%S")
-                return JSONResponse(report_dict, headers=h)
-            else:
+            if not row:
                 return JSONResponse({"error": "Report not found"}, status_code=404, headers=h)
+
+            # 모든 컬럼을 JSON 직렬화 가능 타입으로 변환
+            data = {col: _normalize_for_json(val) for col, val in zip(column_names, row)}
+            return JSONResponse(data, headers=h)
+
         except Exception as e:
             print(f"ERROR in getReportDetailsById: {e}")
             return JSONResponse({"error": f"DB 오류: {e}"}, status_code=500, headers=h)
         finally:
-            if cur: SsyDBManager.closeConCur(con, cur)
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
 
     def updateReportStatuses(self, report_id, is_normal, repair_status):
         h = {"Access-Control-Allow-Origin": "*"}

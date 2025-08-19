@@ -6,6 +6,7 @@ from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from ProjectDB.Notice.noticeDAO import NoticeDAO
 from ProjectDB.imageAI.imageAiDAO import ImageAiDAO
+from ProjectDB.Notification.notificationsDAO import NotificationDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles
@@ -27,6 +28,7 @@ rDAO = RegistrationDAO()
 msDAO = ManagementStatusDAO()
 nDAO = NoticeDAO()
 aiDAO = ImageAiDAO()
+notifDAO = NotificationDAO()
 
 # ai 서버 url
 AI_BASE_URL = os.environ.get("AI_BASE_URL", "http://128.24.59.107:8000")
@@ -604,3 +606,15 @@ async def management_reports():
 @app.get("/management.report/{report_id}")
 async def management_report_detail(report_id: int):
     return msDAO.getReportDetail(report_id)
+
+@app.get("/notifications")
+def get_notifications(recipient_code: Optional[str] = None, limit: int = 50):
+    """
+    사용자의 recipient_code(=user_id)로 알림 조회.
+    recipient_code 없으면 전체 목록(관리/테스트용).
+    """
+    try:
+        data = notifDAO.list(recipient_code, limit)
+        return data
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"error": f"알림 조회 실패: {e}"})
