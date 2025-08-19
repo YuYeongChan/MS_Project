@@ -310,6 +310,23 @@ export default function DamageMapScreen() {
 
   return (
     <View style={styles.container}>
+      <View 
+        style={{
+          paddingTop: 15,
+          height: '10%', backgroundColor: '#436D9D',
+          flexDirection: 'row', alignItems: 'center',
+          justifyContent: 'space-between', paddingHorizontal: 16
+        }}
+      >
+        <Text 
+          style={{
+            color: '#F9F9F9', fontSize: 25,
+            fontFamily: 'PretendardGOV-ExtraBold'
+          }}
+        >
+          City Snap
+        </Text>
+      </View>
       {damageLocations.length > 0 ? (
         <WebView
           originWhitelist={["*"]}
@@ -348,7 +365,7 @@ const styles = StyleSheet.create({
   noDataContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   noDataText: { fontSize: 18, color: "#555" },
   webView: { flex: 1 },
-  closeButtonContainer: { position: "absolute", top: 50, right: 20, zIndex: 100 },
+  closeButtonContainer: { position: "absolute", top: '4.5%', right: 20, zIndex: 100 },
   closeMapButton: {
     backgroundColor: "rgba(0,0,0,0.6)",
     paddingVertical: 8,
