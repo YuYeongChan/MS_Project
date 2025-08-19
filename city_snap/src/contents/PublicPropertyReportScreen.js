@@ -16,7 +16,7 @@ import {
 } from "react-native";
 import GoogleMapPicker from "./sub_contents/GoogleMapPicker";
 import ChooseDate from "./sub_contents/ChooseDate";
-import { styles } from "../style/PublicPropertyReportStyle";
+import { styles, micIconSize } from "../style/PublicPropertyReportStyle"; 
 import { API_BASE_URL, googleMapsApiKey } from "../utils/config";
 import axios from "axios";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
@@ -431,7 +431,7 @@ const PublicPropertyReportScreen = () => {
                   {voiceState === "idle" && (
                     <>
                       <TouchableOpacity onPress={startRecording} style={styles.micButton}>
-                        <Icon name="microphone-outline" size={100} color="white" />
+                        <Icon name="microphone-outline" size={micIconSize} color="white" />
                       </TouchableOpacity>
                       <Text style={styles.voiceDescription}>버튼을 눌러 녹음을 시작하세요.</Text>
                     </>
@@ -440,7 +440,7 @@ const PublicPropertyReportScreen = () => {
                   {voiceState === "recording" && (
                     <>
                       <TouchableOpacity onPress={stopRecording} style={styles.micRecordingButton}>
-                        <Icon name="microphone-outline" size={100} color="white" />
+                        <Icon name="microphone-outline" size={micIconSize} color="white" />
                       </TouchableOpacity>
                       <Text style={styles.voiceDescription}>녹음 중 입니다.</Text>
                     </>
