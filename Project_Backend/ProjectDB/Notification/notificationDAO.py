@@ -1,9 +1,11 @@
 from fastapi.responses import JSONResponse
 from ProjectDB.SSY.ssyDBManager import SsyDBManager
-from typing import Optional
+from typing import Optional,List
 import logging
 from fastapi import HTTPException
+from datetime import datetime 
 
+SEQ_NAME = "notification_seq"  # Oracle 시퀀스 이름
 
 class NotificationDAO:
 
@@ -160,3 +162,156 @@ class NotificationDAO:
         finally:
             if cur:
                 SsyDBManager.closeConCur(con, cur)
+    # ===== 추가: 수신코드 정규화 =====
+    @staticmethod
+    def _normalize_recipient_code(recipient_code: str) -> str:
+        """
+        입력이 이미 USER_ALL / NAME_* / LOCATION_* 면 그대로.
+        아니면 user_id 또는 email로 보고 NAME_ 접두어로 변환.
+        """
+        if not recipient_code:
+            return "USER_ALL"
+        up = recipient_code.strip().upper()
+        if up.startswith(("USER_ALL", "NAME_", "LOCATION_")):
+            return up
+        if "@" in recipient_code:
+            # 이메일 -> @ 앞부분만 추출
+            name_part = recipient_code.strip().split("@", 1)[0]
+            return f"NAME_{name_part.strip().upper()}"
+        return f"NAME_{up}"
+
+    # ===== 추가: 단건 INSERT =====
+    def insert_notification(
+        self,
+        content: str,
+        sender: str,
+        recipient_code: str = "USER_ALL",
+        sent_at: Optional[datetime] = None,   # 파이썬 datetime -> Oracle TIMESTAMP
+    ) -> dict:
+        if not content or not sender:
+            raise HTTPException(status_code=400, detail="content와 sender는 필수입니다.")
+
+        norm_code = self._normalize_recipient_code(recipient_code)
+
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            if cur is None:
+                logging.error("DB cursor init failed")
+                raise HTTPException(status_code=500, detail="DB cursor init failed")
+
+            if sent_at is None:
+                sql = """
+                    INSERT INTO notifications (notification_id, content, sender, recipient_code)
+                    VALUES (notification_seq.NEXTVAL, :p_content, :p_sender, :p_rc)
+                    RETURNING notification_id INTO :p_new_id
+                """
+                params = {"p_content": content, "p_sender": sender, "p_rc": norm_code}
+            else:
+                sql = """
+                    INSERT INTO notifications (notification_id, content, sent_at, sender, recipient_code)
+                    VALUES (notification_seq.NEXTVAL, :p_content, :p_sent_at, :p_sender, :p_rc)
+                    RETURNING notification_id INTO :p_new_id
+                """
+                params = {
+                    "p_content": content,
+                    "p_sent_at": sent_at,  # 오라클 드라이버가 TIMESTAMP로 매핑
+                    "p_sender": sender,
+                    "p_rc": norm_code
+                }
+
+            out_id = cur.var(int)
+            params["p_new_id"] = out_id
+            cur.execute(sql, params)
+            con.commit()
+
+            new_id = out_id.getvalue()
+            if isinstance(new_id, (list, tuple)):
+                new_id = new_id[0]
+
+            logging.info(f"[Notifications] inserted id={new_id}, rc={norm_code}")
+            return {"result": "ok", "notification_id": int(new_id) if new_id is not None else None}
+
+        except Exception as e:
+            if con: con.rollback()
+            logging.exception(f"[Notifications] insert failed: {e}")
+            raise HTTPException(status_code=500, detail="Insert failed")
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    # ===== 추가: 일괄 INSERT =====
+    def insert_notifications_bulk(
+        self,
+        content: str,
+        sender: str,
+        recipients: List[str],
+        sent_at: Optional[datetime] = None,
+    ) -> dict:
+        if not content or not sender:
+            raise HTTPException(status_code=400, detail="content와 sender는 필수입니다.")
+        if not recipients:
+            raise HTTPException(status_code=400, detail="recipients가 비어있습니다.")
+
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            if cur is None:
+                logging.error("DB cursor init failed")
+                raise HTTPException(status_code=500, detail="DB cursor init failed")
+
+            if sent_at is None:
+                sql = """
+                    INSERT INTO notifications (notification_id, content, sender, recipient_code)
+                    VALUES (notification_seq.NEXTVAL, :p_content, :p_sender, :p_rc)
+                    RETURNING notification_id INTO :p_new_id
+                """
+            else:
+                sql = """
+                    INSERT INTO notifications (notification_id, content, sent_at, sender, recipient_code)
+                    VALUES (notification_seq.NEXTVAL, :p_content, :p_sent_at, :p_sender, :p_rc)
+                    RETURNING notification_id INTO :p_new_id
+                """
+
+            ids = []
+            for rc in recipients:
+                norm_code = self._normalize_recipient_code(rc)
+                out_id = cur.var(int)
+                params = {
+                    "p_content": content,
+                    "p_sender": sender,
+                    "p_rc": norm_code,
+                    "p_new_id": out_id
+                }
+                if sent_at is not None:
+                    params["p_sent_at"] = sent_at
+
+                cur.execute(sql, params)
+                new_id = out_id.getvalue()
+                if isinstance(new_id, (list, tuple)):
+                    new_id = new_id[0]
+                ids.append(int(new_id) if new_id is not None else None)
+
+            con.commit()
+            logging.info(f"[Notifications] bulk inserted cnt={len(ids)}")
+            return {"result": "ok", "inserted": len(ids), "ids": ids}
+
+        except Exception as e:
+            if con: con.rollback()
+            logging.exception(f"[Notifications] bulk insert failed: {e}")
+            raise HTTPException(status_code=500, detail="Bulk insert failed")
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+
+    # ===== 추가: 헬퍼들 =====
+    def broadcast_all(self, content: str, sender: str, sent_at: Optional[datetime]=None) -> dict:
+        return self.insert_notification(content=content, sender=sender, recipient_code="USER_ALL", sent_at=sent_at)
+
+    def notify_user(self, content: str, sender: str, user_id_or_email: str, sent_at: Optional[datetime]=None) -> dict:
+        rc = self._normalize_recipient_code(user_id_or_email)
+        return self.insert_notification(content=content, sender=sender, recipient_code=rc, sent_at=sent_at)
+
+    def notify_location(self, content: str, sender: str, location_code: str, sent_at: Optional[datetime]=None) -> dict:
+        rc = location_code if location_code.upper().startswith("LOCATION_") else f"LOCATION_{location_code.strip().upper()}"
+        return self.insert_notification(content=content, sender=sender, recipient_code=rc, sent_at=sent_at)

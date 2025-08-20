@@ -8,14 +8,14 @@ from ProjectDB.Notice.noticeDAO import NoticeDAO
 from ProjectDB.imageAI.imageAiDAO import ImageAiDAO
 from ProjectDB.Notification.notificationDAO import NotificationDAO
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Optional,Dict
+from typing import Optional,Dict, List
 from fastapi.staticfiles import StaticFiles
 import shutil # shutil 임포트 유지
 import json # json 임포트 유지
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 # 개인정보 수정
-from pydantic import BaseModel
+from pydantic import BaseModel,Field,constr
 from urllib.parse import unquote # ADMIN 랭킹 개인정보 확인
 from token_utils import create_access_token, create_refresh_token, REFRESH_SECRET_KEY, SECRET_KEY, ALGORITHM, EXPO_PUSH_URL
 import httpx
@@ -62,12 +62,37 @@ def issue_token(user_id: str):
     }
 
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-    
+
+# ==== Pydantic 모델 ====
 # 개인정보 수정 
 class UpdateUserInfoRequest(BaseModel):
     nickname: Optional[str]
     phone_number: Optional[str]
     address: Optional[str]
+
+# Notifications 입력 모델 (DB 스키마 길이 반영)
+# class NotificationCreateIn(BaseModel):
+#     content:constr(min_length=1, max_length=1000)
+#     sender: constr(min_length=1, max_length=50)
+#     recipient_code: Optional[constr(max_length=200)] = "USER_ALL"  # user_id/email/NAME_/LOCATION_ 허용
+    
+
+# class NotificationBulkIn(BaseModel):
+#     content: constr(min_length=1, max_length=1000)
+#     sender:  constr(min_length=1, max_length=50)
+#     recipients: List[constr(max_length=200)] = Field(..., min_items=1)
+    
+# 제약조건 없는 단순 버전
+class NotificationCreateIn(BaseModel):
+    content: str
+    sender: str
+    recipient_code: Optional[str] = "USER_ALL"  # user_id/email/NAME_/LOCATION_ 허용
+
+class NotificationBulkIn(BaseModel):
+    content: str
+    sender: str
+    recipients: List[str]
+#######################
 
 UPLOAD_PROFILE_DIR = os.path.join(os.path.dirname(__file__), "profile_photos")
 #폴더가 없다면 생성
@@ -770,3 +795,63 @@ def test():
     }
 
     return JSONResponse(body, headers=h)
+
+# 단건 생성 (USER_ALL / NAME_xxx / LOCATION_xxx 또는 user_id/email 입력)
+@app.post("/notifications.create")
+def notifications_create(payload: NotificationCreateIn):
+    return notifyDAO.insert_notification(
+        content=payload.content,
+        sender=payload.sender,
+        recipient_code=payload.recipient_code,
+        sent_at=None,  # 항상 None -> DB가 현재시각 자동 입력
+    )
+
+# 여러 대상 일괄 생성
+@app.post("/notifications.bulk")
+def notifications_bulk(payload: NotificationBulkIn):
+    return notifyDAO.insert_notifications_bulk(
+        content=payload.content,
+        sender=payload.sender,
+        recipients=payload.recipients,
+        sent_at=None,
+    )
+
+# 전 사용자 브로드캐스트
+@app.post("/notifications.broadcast_all")
+def notifications_broadcast_all(
+    content: str = Body(...),
+    sender:  str = Body(...),
+):
+    return notifyDAO.broadcast_all(
+        content=content,
+        sender=sender,
+        sent_at=None,
+    )
+
+# 특정 사용자(아이디/이메일)
+@app.post("/notifications.notify_user")
+def notifications_notify_user(
+    content: str = Body(...),
+    sender:  str = Body(...),
+    user_id_or_email: str = Body(...),
+):
+    return notifyDAO.notify_user(
+        content=content,
+        sender=sender,
+        user_id_or_email=user_id_or_email,
+        sent_at=None,
+    )
+
+# 특정 지역(LOCATION_코드 또는 원시값)
+@app.post("/notifications.notify_location")
+def notifications_notify_location(
+    content: str = Body(...),
+    sender:  str = Body(...),
+    location_code: str = Body(...),  # "SEOUL" / "강남구" / "LOCATION_SEOUL"
+):
+    return notifyDAO.notify_location(
+        content=content,
+        sender=sender,
+        location_code=location_code,
+        sent_at=None,
+    )
