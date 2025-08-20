@@ -13,9 +13,12 @@ import Ionicons from "react-native-vector-icons/Ionicons";
 import { apiFetch } from "../auth/api";
 import { getTokens } from "../auth/authStorage";
 import jwt_decode from "jwt-decode";
+import { Dimensions } from "react-native";
 
-const POPUP_WIDTH = 360;
-const POPUP_HEIGHT = 260;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+const POPUP_WIDTH = SCREEN_WIDTH * 0.85;
+const POPUP_HEIGHT = SCREEN_HEIGHT * 0.35;
 
 export default function NotificationsPopover({ visible, onClose }) {
   const [items, setItems] = useState([]);

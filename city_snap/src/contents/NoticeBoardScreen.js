@@ -13,21 +13,28 @@ function NoticeBoardScreen() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 6;
 
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/get_notices`)
-      .then((response) => response.json())
-      .then(data => {
-        const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-        setNotices(parsed);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+  // 1) 공지 로드 함수 분리 (useCallback으로 메모이즈)
+  const fetchNotices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/get_notices`);
+      const data = await res.json();
+      const parsed = typeof data === "string" ? JSON.parse(data) : data;
+      setNotices(parsed || []);
+    } catch (e) {
+      console.warn("공지 불러오기 실패:", e);
+      setNotices([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
+  // 화면이 포커스될 때마다 새로고침 + 페이지 초기화
   useFocusEffect(
     useCallback(() => {
       setPage(1);
-    }, [])
+      fetchNotices();
+    }, [fetchNotices])
   );
 
   const fixedNotices = notices.filter(n => n.fixed);
@@ -56,20 +63,21 @@ function NoticeBoardScreen() {
   return (
     <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
       <View style={styles.container}>
-        <Text style={styles.title}>공지 사항</Text>
+        {/* 선택: 수동 새로고침도 원하면 버튼 추가 */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-start" }}>
+          <Text style={styles.title}>공지 사항</Text>
+        </View>
 
         {loading ? (
           <ActivityIndicator size="large" color="#436D9D" />
         ) : (
           <>
-            {/* 고정 공지사항 */}
             {fixedNotices.length > 0 && (
               <View style={styles.fixedNotices}>
                 {fixedNotices.map(item => renderNoticeItem(item, true))}
               </View>
             )}
 
-            {/* 일반 공지사항 */}
             {pagedNotices.length === 0 && fixedNotices.length === 0 ? (
               <Text style={styles.emptyText}>공지사항이 없습니다.</Text>
             ) : (
@@ -78,13 +86,12 @@ function NoticeBoardScreen() {
               </View>
             )}
 
-            {/* 페이지네이션 */}
             {totalPages > 1 && (
               <View style={styles.pageButtonArea}>
                 <TouchableOpacity
                   style={styles.pageButton}
                   disabled={page === 1}
-                  onPress={() => setPage(page - 1)}
+                  onPress={() => setPage(p => Math.max(1, p - 1))}
                 >
                   <Text style={page === 1 ? styles.disabledText : styles.pageButtonText}>이전</Text>
                 </TouchableOpacity>
@@ -92,30 +99,25 @@ function NoticeBoardScreen() {
                 <TouchableOpacity
                   style={styles.pageButton}
                   disabled={page === totalPages}
-                  onPress={() => setPage(page + 1)}
+                  onPress={() => setPage(p => Math.min(totalPages, p + 1))}
                 >
                   <Text style={page === totalPages ? styles.disabledText : styles.pageButtonText}>다음</Text>
                 </TouchableOpacity>
               </View>
             )}
-            
-            {/* 상세 모달 */}
+
             {selectedNotice && (
               <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
                 <View style={styles.modalOverlay}>
                   <View style={styles.modalContent}>
-                    <TouchableOpacity style={styles.modalCloseIcon} onPress={() => setVisible(false)}>
-                        <Feather name="x" size={28} color="#888" />
-                    </TouchableOpacity>
-
                     <View style={styles.modalContentHeader}>
                       <Text style={styles.modalTitle}>{selectedNotice.title}</Text>
                     </View>
                     <Text style={styles.modalDate}>{selectedNotice.notice_date}</Text>
                     <Text style={styles.modalAdmin}>작성자: {selectedNotice.admin_name}</Text>
-                    
+
                     <ScrollView style={styles.modalScrollView}>
-                        <Text style={styles.modalContentText}>{selectedNotice.content}</Text>
+                      <Text style={styles.modalContentText}>{selectedNotice.content}</Text>
                     </ScrollView>
 
                     <TouchableOpacity style={styles.modalCloseButton} onPress={() => setVisible(false)}>
