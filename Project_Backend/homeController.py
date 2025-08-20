@@ -6,7 +6,7 @@ from ProjectDB.Registration.RegistrationDAO import RegistrationDAO
 from ProjectDB.ManagementStatus.ManagementStatusDAO import ManagementStatusDAO
 from ProjectDB.Notice.noticeDAO import NoticeDAO
 from ProjectDB.imageAI.imageAiDAO import ImageAiDAO
-from ProjectDB.Notification.notificationsDAO import NotificationDAO
+from ProjectDB.Notification.notificationDAO import NotificationDAO
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional,Dict
 from fastapi.staticfiles import StaticFiles

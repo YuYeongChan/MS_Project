@@ -1,7 +1,5 @@
 import { getTokens, saveTokens, clearTokens } from './authStorage';
-
-// build 시 EXPO_PUBLIC_API_BASE_URL 값이 있으면 사용, 없으면 해당 url 사용
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || '';
+import { API_BASE_URL } from '../utils/config';
 
 // refresh 엔드포인트
 const REFRESH_PATH = '/auth/refresh';
