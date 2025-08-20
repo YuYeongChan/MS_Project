@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../utils/config';
+import { api } from '../../auth/api';
 
 const ImageCarousel = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -87,19 +88,6 @@ export default function AdminReportListScreen() {
                 body: formData,
             });
 
-            if(repairStatusInModal){
-
-                // 해당 건을 올린 사용자에게 수리 완료 알림
-                const data = {
-                    "to_user_id" : selectedReport.report_id,
-                    "title": "수리 완료 알림",
-                    "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
-                }
-                const res = await api.postJSON("/notification.notify", data);
-
-                // 근처 다른 사용자에게 수리 완료 알림
-            }
-
             if (response.ok) {
                 Alert.alert("성공", "상태가 업데이트되었습니다.");
                 setModalVisible(false);
@@ -109,14 +97,20 @@ export default function AdminReportListScreen() {
                 if(repairStatusInModal){
 
                     // 해당 건을 올린 사용자에게 수리 완료 알림
-                    const data = {
-                        "to_user_id" : selectedReport.report_id,
-                        "title": "수리 완료 알림",
-                        "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
-                    }
-                    const res = await api.postJSON("/notification.notify", data);
-
                     // 근처 다른 사용자에게 수리 완료 알림
+                    const data = {
+                        
+                        "user_id" : selectedReport.user_id,
+                        "msg1": {
+                            "title": "수리 완료 알림",
+                            "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
+                        },
+                        "msg2":{
+                            "title": "수리 완료 알림",
+                            "body": "동네 공공기물의 수리가 완료되었어요!"
+                        }
+                    }
+                    const res = await api.postJSON("/notification.notify_repair", data);
                 }
                 
                 appEvents.emit(EVENTS.REPORT_STATUS_UPDATED, {

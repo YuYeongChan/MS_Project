@@ -695,78 +695,151 @@ async def send_notification_to_admin(title: str = Body(...), body: str = Body(..
                 else:
                     errors.append(item)  # 개별 실패(토큰 형식 오류 등)
 
-            body = {
-                "result": {
-                    "tickets": tickets,
-                    "errors": errors,
-                    "count": len(messages)
-                }
+        body = {
+            "result": {
+                "tickets": tickets,
+                "errors": errors,
+                "count": len(messages)
             }
+        }
 
-            return JSONResponse(body, headers=h)
+        return JSONResponse(body, headers=h)
         
-@app.post("/notification.notify_local")
-async def send_notification_to_admin(user_id: str = Body(...), title: str = Body(...), body: str = Body(...), data: dict = Body({})):
+@app.post("/notification.notify_repair")
+async def send_notification_repair(user_id: str = Body(), msg1: dict = Body(), msg2: dict = Body()):
     h = {"Access-Control-Allow-Origin": "*"}
 
-    # admin의 토큰만 추출
-    admin_tokens = notifyDAO.getAdminExpoPushToken()
-
-    if not admin_tokens:
-        raise HTTPException(status_code=400, detail="푸시 토큰 없음")
+    # 알림을 보낼 계정의 토큰 추출
+    other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
 
     tickets = []
     errors = []
 
     # 100개씩 나눠서 알림 전송
     async with httpx.AsyncClient(timeout=15) as client:
-        # 청크별 전송 (순차/동시 중 택1; 안정성을 위해 순차 전송)
-        for group in chunk(admin_tokens, 100):
-            messages = []
-            for t in group:
+        
+        messages = []
+        for idx, t in enumerate(other_tokens):
+                if user_ids[idx] != user_id:
+                    msg = {
+                        "to": t,
+                        "title": msg2["title"],
+                        "body": msg2["body"],
+                        "data": {},
+                        "sound": "default",
+                        "channelId": "default",
+                        "priority": "high",
+                    }
+                else:
+                    msg = {
+                        "to": t,
+                        "title": msg1["title"],
+                        "body": msg1["body"],
+                        "data": {},
+                        "sound": "default",
+                        "channelId": "default",
+                        "priority": "high",
+                    }
+                # if data is not None:
+                #     msg["data"] = data
+
+                messages.append(msg)
+
+        resp = await client.post(EXPO_PUSH_URL, json=messages)
+        resp.raise_for_status()
+        out = resp.json()
+
+        # 각 메시지별 ticket 처리
+        for item in out["data"]:
+            if item["status"] == "ok":
+                if "id" in item:
+                    tickets.append(item["id"])
+            else:
+                errors.append(item)  # 개별 실패(토큰 형식 오류 등)
+
+        body = {
+            "result": {
+                "tickets": tickets,
+                "errors": errors,
+                "count": len(messages)
+            }
+        }
+
+        return JSONResponse(body, headers=h)
+    
+@app.post("/notification.notify_reg")
+async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2: dict = Body()):
+    h = {"Access-Control-Allow-Origin": "*"}
+
+    # 알림을 보낼 계정의 토큰 추출
+    other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
+
+    # admin의 토큰만 추출
+    admin_tokens = notifyDAO.getAdminExpoPushToken()
+
+    tickets = []
+    errors = []
+
+    # 100개씩 나눠서 알림 전송
+    async with httpx.AsyncClient(timeout=15) as client:
+        
+        messages = []
+        for idx, t in enumerate(other_tokens):
+            if user_ids[idx] != user_id:
                 msg = {
                     "to": t,
-                    "title": title,
-                    "body": body,
-                    "data": data,
+                    "title": msg2["title"],
+                    "body": msg2["body"],
+                    "data": {},
                     "sound": "default",
                     "channelId": "default",
                     "priority": "high",
                 }
-                if data is not None:
-                    msg["data"] = data
+
                 messages.append(msg)
 
-            resp = await client.post(EXPO_PUSH_URL, json=messages)
-            resp.raise_for_status()
-            out = resp.json()
-
-            # 각 메시지별 ticket 처리
-            for item in out["data"]:
-                if item["status"] == "ok":
-                    if "id" in item:
-                        tickets.append(item["id"])
-                else:
-                    errors.append(item)  # 개별 실패(토큰 형식 오류 등)
-
-            body = {
-                "result": {
-                    "tickets": tickets,
-                    "errors": errors,
-                    "count": len(messages)
-                }
+        for t in admin_tokens:
+            msg = {
+                "to": t,
+                "title": msg1["title"],
+                "body": msg1["body"],
+                "data": {},
+                "sound": "default",
+                "channelId": "default",
+                "priority": "high",
             }
+            messages.append(msg)
 
-            return JSONResponse(body, headers=h)
+        resp = await client.post(EXPO_PUSH_URL, json=messages)
+        resp.raise_for_status()
+        out = resp.json()
+
+        # 각 메시지별 ticket 처리
+        for item in out["data"]:
+            if item["status"] == "ok":
+                if "id" in item:
+                    tickets.append(item["id"])
+            else:
+                errors.append(item)  # 개별 실패(토큰 형식 오류 등)
+
+        body = {
+            "result": {
+                "tickets": tickets,
+                "errors": errors,
+                "count": len(messages)
+            }
+        }
+
+        return JSONResponse(body, headers=h)
     
 @app.post("/test")
 def test():
     h = {"Access-Control-Allow-Origin": "*"}
 
-    # admin의 토큰만 추출
-    admin_token = notifyDAO.getAdminExpoPushToken()
+    other_token, user_ids = notifyDAO.getLocalExpoPushToken()
     body = {
-        "result": admin_token
+        "other_token": other_token,
+        "user_ids": user_ids,
     }
 
     return JSONResponse(body, headers=h)

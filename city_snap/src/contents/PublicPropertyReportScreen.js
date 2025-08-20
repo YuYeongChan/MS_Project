@@ -181,9 +181,9 @@ const PublicPropertyReportScreen = () => {
       const responseData = await res.json();
       if (res.ok) {
 
-        const data = {
-          "title": "신규 신고 등록 알림",
-          "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`
+        data = {
+            "title": "신규 신고 등록 알림",
+            "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`
         }
 
         // 관리자에게 알림 보냄

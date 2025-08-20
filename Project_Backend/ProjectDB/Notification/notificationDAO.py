@@ -160,3 +160,31 @@ class NotificationDAO:
         finally:
             if cur:
                 SsyDBManager.closeConCur(con, cur)
+
+    # 알림용 토큰 받기 (지역)
+    def getLocalExpoPushToken(self):
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            sql =   """
+                    SELECT token, user_id
+                    FROM Users
+                    WHERE is_admin = 0 and token is not NULL
+                    """
+            cur.execute(sql)
+
+            other_token = []
+            user_ids = []
+
+            for token, user_id in cur:
+                other_token.append(token)
+                user_ids.append(user_id)
+
+            return other_token, user_ids
+
+        except Exception as e:
+            print(f"[getLocalExpoPushToken] SQL 오류: {e}")
+            return "err", "err"
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)

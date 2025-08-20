@@ -8,7 +8,7 @@ import { appEvents, EVENTS } from "../../utils/eventBus";
 const USE_MOCK_ONLY = false;
 // 분석된 이미지가 없을 경우 임시 이미지 사용 여부
 // 조회 API: AI 필드(ai_status, caption_ko, mask_url)를 포함하는 엔드포인트 사용
-const REPORTS_API = `${API_BASE_URL}/management.reports`; // ⭐ 중요
+const REPORTS_API = `${API_BASE_URL}/management.reports`;
 
 export default function AdminDamageContent() {
   const [damageLocations, setDamageLocations] = useState([]);
@@ -87,8 +87,8 @@ export default function AdminDamageContent() {
         ...loc,
         REPAIR_STATUS: repairStatus,
         status_text: repairStatus === 0 ? "파손 - 수리대기중" : "수리완료",
-        ai_result_text: aiText,                           // ⭐ 상세 패널 텍스트 용
-        analyzed_photo_url: analyzedUrl,                  // ⭐ 슬라이더의 AI 분석 이미지 URL
+        ai_result_text: aiText,                           // 상세 패널 텍스트 용
+        analyzed_photo_url: analyzedUrl,                  // 슬라이더의 AI 분석 이미지 URL
         _photo_url_http: `${API_BASE_URL}/registration_photos/${trimLeadingSlash(loc.photo_url)}`, // 편의 필드
         // 아래 3개는 상세 패널 표시용 안전 필드
         _address: loc.location_description || "주소 정보 없음",
@@ -100,7 +100,7 @@ export default function AdminDamageContent() {
   // API로부터 파손 위치 데이터를 가져오는 함수
   const fetchDamageLocations = async () => {
     try {
-      const res = await fetch(REPORTS_API, {  // ⭐ AI 필드 포함 응답 사용
+      const res = await fetch(REPORTS_API, {  // AI 필드 포함 응답 사용
         headers: { "Cache-Control": "no-cache" },
       });
       const data = await res.json();
@@ -111,7 +111,6 @@ export default function AdminDamageContent() {
             String(loc.IS_NORMAL ?? loc.is_normal) === "0" && 
             String(loc.REPAIR_STATUS ?? loc.repair_status) === "0"  // is_normal이 0이고 repair_status가 0인 것을 동시에 만족시키는 것만 
         );
-        console.log(filtered)
         setDamageLocations(ensureUiFields(filtered));
         return true;
       }
