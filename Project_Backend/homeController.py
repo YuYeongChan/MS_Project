@@ -220,13 +220,35 @@ async def registrationWrite(
     try:
         payload = json.loads(resp.body)
         report_id = int(payload.get("report_id"))
-        photo_filename = payload.get("photo_url")  # 프로젝트 키에 맞춰 조정
+        photo_filename = payload.get("photo_url")
         base = str(request.base_url).rstrip("/")
-        input_image_url = f"{base}/registration_photos/{photo_filename}"  # 정적 마운트 기준
+        input_image_url = f"{base}/registration_photos/{photo_filename}"
 
-        # 3) 백그라운드 실행 (클래스 메소드 호출)
+        # 3) AI 백그라운드 작업 추가
         if background_tasks:
             background_tasks.add_task(aiDAO.process_report, report_id, input_image_url)
+
+        # 4) 신고 등록 성공 시 알림 추가
+        # 신고자 정보 가져오기 (여기서는 user_id로 닉네임 등을 조회)
+        user_info = aDAO.getUserInfo(user_id)
+        nickname = user_info.get("nickname", "익명")
+
+        # 관리자에게 알림 보내기
+        admin_notification_data = {
+            "title": "[신규 신고 등록 알림]",
+            "body": f"사용자 '{nickname}'님이 새로운 파손 내용을 등록하셨습니다.",
+        }
+        # 백그라운드 태스크에 알림 전송 작업 추가 (API 호출)
+        background_tasks.add_task(notifyDAO.send_notification_to_admin_task, **admin_notification_data)
+
+        # 주변 사용자들에게 알림 보내기
+        local_notification_data = {
+            "title": "[새로운 파손 공공기물 발견]",
+            "body": f"근처에 새로운 파손된 공공기물이 신고되었습니다.",
+        }
+        background_tasks.add_task(notifyDAO.send_notification_to_local_task, **local_notification_data)
+
+
     except Exception as e:
         print("BG schedule error:", e)
 
@@ -680,117 +702,133 @@ def chunk(lst, n=100):
 async def send_notification_to_admin(title: str = Body(...), body: str = Body(...), data: dict = Body({})):
     h = {"Access-Control-Allow-Origin": "*"}
 
-    # admin의 토큰만 추출
-    admin_tokens = notifyDAO.getAdminExpoPushToken()
+    # 1. 관리자 유저 ID와 토큰을 함께 가져옵니다.
+    #    getAdminsWithTokens 함수는 (user_id, token) 튜플 리스트를 반환합니다.
+    admins = notifyDAO.getAdminsWithTokens()
 
-    if not admin_tokens:
-        raise HTTPException(status_code=400, detail="푸시 토큰 없음")
+    if not admins:
+        raise HTTPException(status_code=400, detail="관리자 푸시 토큰 없음")
 
-    tickets = []
-    errors = []
+    admin_ids  = [u for (u, _t) in admins]
+    admin_toks = [t for (_u, t) in admins]
 
-    # 100개씩 나눠서 알림 전송
+    # 2. 알림 내용을 DB에 일괄 저장합니다.
+    try:
+        notifyDAO.insert_notifications_bulk(
+            content=f"{title}\n{body}",
+            sender="system",
+            recipients=admin_ids
+        )
+    except Exception as e:
+        print(f"[notify_admin] DB insert 실패: {e}")
+        # DB 저장 실패 시에도 푸시 전송은 계속 진행하도록 합니다.
+
+    # 3. 푸시 알림 전송 로직 (기존 코드 유지)
+    tickets, errors = [], []
     async with httpx.AsyncClient(timeout=15) as client:
-        # 청크별 전송 (순차/동시 중 택1; 안정성을 위해 순차 전송)
-        for group in chunk(admin_tokens, 100):
-            messages = []
-            for t in group:
-                msg = {
-                    "to": t,
-                    "title": title,
-                    "body": body,
-                    "data": data,
-                    "sound": "default",
-                    "channelId": "default",
-                    "priority": "high",
-                }
-                if data is not None:
-                    msg["data"] = data
-                messages.append(msg)
-
+        # 100개씩 나눠서 알림 전송
+        for group in chunk(admin_toks, 100):
+            messages = [
+                {"to": t, "title": title, "body": body, "data": data or {}, "sound": "default", "channelId": "default", "priority": "high"}
+                for t in group
+            ]
             resp = await client.post(EXPO_PUSH_URL, json=messages)
             resp.raise_for_status()
             out = resp.json()
-
-            # 각 메시지별 ticket 처리
-            for item in out["data"]:
-                if item["status"] == "ok":
-                    if "id" in item:
-                        tickets.append(item["id"])
+            for item in out.get("data", []):
+                if item.get("status") == "ok":
+                    tickets.append(item.get("id"))
                 else:
-                    errors.append(item)  # 개별 실패(토큰 형식 오류 등)
+                    errors.append(item)
 
-        body = {
-            "result": {
-                "tickets": tickets,
-                "errors": errors,
-                "count": len(messages)
-            }
-        }
-
-        return JSONResponse(body, headers=h)
+    return JSONResponse({"result": {"tickets": tickets, "errors": errors}}, headers=h)
         
 @app.post("/notification.notify_repair")
-async def send_notification_repair(user_id: str = Body(), msg1: dict = Body(), msg2: dict = Body()):
+async def send_notification_repair(
+    user_id: str = Body(...),
+    msg1: dict = Body(...),  # 신고자용 메시지
+    msg2: dict = Body(...),  # 주변 사용자용 메시지
+):
     h = {"Access-Control-Allow-Origin": "*"}
+    
+    # 1. 신고자에게 보낼 알림을 DB에 저장합니다.
+    try:
+        notifyDAO.notify_user(
+            content=f"{msg1.get('title','')}\n{msg1.get('body','')}",
+            sender="system",
+            user_id_or_email=user_id
+        )
+    except Exception as e:
+        print(f"[notify_repair] 신고자 DB insert 실패: {e}")
 
-    # 알림을 보낼 계정의 토큰 추출
+    # 2. 주변 사용자 목록을 가져와서 알림을 DB에 저장합니다.
     other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
+    recipients_for_db = [uid for uid, t in zip(user_ids, other_tokens) if uid and uid != user_id and t]
+    
+    try:
+        if recipients_for_db:
+            notifyDAO.insert_notifications_bulk(
+                content=f"{msg2.get('title','')}\n{msg2.get('body','')}",
+                sender="system",
+                recipients=recipients_for_db
+            )
+    except Exception as e:
+        print(f"[notify_repair] 주변 사용자 DB insert 실패: {e}")
 
-    tickets = []
-    errors = []
+    # 3. 푸시 알림 전송 로직 (기존 코드 유지)
+    # messages 리스트를 구성하고, httpx.post를 호출하는 기존 로직은 그대로 두세요.
+    # ... (기존 코드) ...
+    
+    # 이 부분에 `messages` 리스트 구성 및 푸시 전송 로직이 포함됩니다.
+    # 이 로직을 정확히 재현하기 위해 `homeController.py`에 있는 기존 `/notification.notify_repair` 코드를
+    # 아래의 메시지 리스트 생성 및 httpx 호출 로직으로 교체해야 합니다.
 
-    # 100개씩 나눠서 알림 전송
-    async with httpx.AsyncClient(timeout=15) as client:
-        
+    tickets, errors, total_count = [], [], 0
+    async with httpx.AsyncClient(timeout=20) as client:
         messages = []
-        for idx, t in enumerate(other_tokens):
-                if user_ids[idx] != user_id:
-                    msg = {
-                        "to": t,
-                        "title": msg2["title"],
-                        "body": msg2["body"],
-                        "data": {},
-                        "sound": "default",
-                        "channelId": "default",
-                        "priority": "high",
-                    }
+        # 신고자 메시지
+        reporter_token = notifyDAO.getExpoPushToken(user_id)
+        if reporter_token:
+            messages.append({
+                "to": reporter_token,
+                "title": msg1.get("title"),
+                "body": msg1.get("body"),
+                "data": {},
+                "sound": "default",
+                "channelId": "default",
+                "priority": "high",
+            })
+        
+        # 주변 사용자 메시지
+        for t, uid in zip(other_tokens, user_ids):
+            if uid and uid != user_id and t:
+                messages.append({
+                    "to": t,
+                    "title": msg2.get("title"),
+                    "body": msg2.get("body"),
+                    "data": {},
+                    "sound": "default",
+                    "channelId": "default",
+                    "priority": "high",
+                })
+
+        # Expo는 100개 권장 청크
+        CHUNK = 100
+        for i in range(0, len(messages), CHUNK):
+            chunk_msgs = messages[i:i+CHUNK]
+            resp = await client.post(EXPO_PUSH_URL, json=chunk_msgs)
+            resp.raise_for_status()
+            out = resp.json()
+            total_count += len(chunk_msgs)
+            for item in out.get("data", []):
+                if item.get("status") == "ok":
+                    tickets.append(item.get("id"))
                 else:
-                    msg = {
-                        "to": t,
-                        "title": msg1["title"],
-                        "body": msg1["body"],
-                        "data": {},
-                        "sound": "default",
-                        "channelId": "default",
-                        "priority": "high",
-                    }
-                # if data is not None:
-                #     msg["data"] = data
+                    errors.append(item)
 
-                messages.append(msg)
-
-        resp = await client.post(EXPO_PUSH_URL, json=messages)
-        resp.raise_for_status()
-        out = resp.json()
-
-        # 각 메시지별 ticket 처리
-        for item in out["data"]:
-            if item["status"] == "ok":
-                if "id" in item:
-                    tickets.append(item["id"])
-            else:
-                errors.append(item)  # 개별 실패(토큰 형식 오류 등)
-
-        body = {
-            "result": {
-                "tickets": tickets,
-                "errors": errors,
-                "count": len(messages)
-            }
-        }
-
-        return JSONResponse(body, headers=h)
+    return JSONResponse({
+        "result": {"tickets": tickets, "errors": errors, "count": total_count}
+    }, headers=h)
     
 @app.post("/notification.notify_reg")
 async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2: dict = Body()):

@@ -182,7 +182,7 @@ const PublicPropertyReportScreen = () => {
       if (res.ok) {
 
         data = {
-            "title": "신규 신고 등록 알림",
+            "title": "[신규 신고 등록 알림]",
             "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`
         }
 

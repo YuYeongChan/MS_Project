@@ -1,6 +1,6 @@
 from fastapi.responses import JSONResponse
 from ProjectDB.SSY.ssyDBManager import SsyDBManager
-from typing import Optional,List
+from typing import Optional, List, Tuple
 import logging
 from fastapi import HTTPException
 from datetime import datetime 
@@ -329,6 +329,56 @@ class NotificationDAO:
             if con: con.rollback()
             logging.exception(f"[Notifications] bulk insert failed: {e}")
             raise HTTPException(status_code=500, detail="Bulk insert failed")
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+    # ------- (B) 관리자 (user_id, token) 함께 조회: DB 저장에 필요 -------
+    def getAdminsWithTokens(self) -> List[tuple[str, str]]:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            cur.execute("""
+                SELECT user_id, token
+                FROM USERS
+                WHERE is_admin = 1
+                AND token IS NOT NULL
+            """)
+            return [(r[0], r[1]) for r in cur.fetchall()]
+        except Exception as e:
+            logging.exception(f"[getAdminsWithTokens] SQL 오류: {e}")
+            return []
+        finally:
+            if cur:
+                SsyDBManager.closeConCur(con, cur)
+    def getAllExpoPushToken(self, exclude_user_id: Optional[str] = None) -> Tuple[List[str], List[str]]:
+        con, cur = None, None
+        try:
+            con, cur = SsyDBManager.makeConCur()
+            if exclude_user_id:
+                sql = """
+                    SELECT token, user_id
+                    FROM USERS
+                    WHERE token IS NOT NULL
+                    AND UPPER(TRIM(user_id)) <> UPPER(TRIM(:uid))
+                """
+                cur.execute(sql, {"uid": exclude_user_id})
+            else:
+                sql = """
+                    SELECT token, user_id
+                    FROM USERS
+                    WHERE token IS NOT NULL
+                """
+                cur.execute(sql)
+
+            tokens, user_ids = [], []
+            for tok, uid in cur:
+                tokens.append(tok)
+                user_ids.append(uid)
+            return tokens, user_ids
+
+        except Exception as e:
+            print(f"[getAllExpoPushToken] SQL 오류: {e}")
+            return [], []
         finally:
             if cur:
                 SsyDBManager.closeConCur(con, cur)
