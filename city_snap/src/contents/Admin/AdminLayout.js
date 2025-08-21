@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { BackHandler } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import AdminTopBar from '../AdminTopBar';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,10 +12,21 @@ import AdminReportListScreen from './AdminReportListScreen';
 
 const Tab = createBottomTabNavigator();
 
-export default function AdminLayout({ route }) {
+export default function AdminLayout() {
   const navigation = useNavigation();
+  const route = useRoute();
 
+  // 콜드 스타트: 최초 탭 선택
   const initialRoute = route?.params?.initialRoute ?? 'ReportList';
+
+  // 웜/포그라운드: goToTab 파라미터가 바뀌면 해당 탭으로 이동
+  useEffect(() => {
+    const goTo = route?.params?.goToTab;
+    if (goTo) {
+      // Tab.Navigator 안에서 탭 전환
+      navigation.navigate(goTo);
+    }
+  }, [route?.params?.goToTab, navigation]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {

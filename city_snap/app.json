@@ -17,19 +17,12 @@
       "bundleIdentifier": "n"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff",
-        "permissions": [
-          "RECORD_AUDIO"
-        ]
-      },
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "edgeToEdgeEnabled": true,
       "package": "com.moon0929.city_snap",
       "googleServicesFile": "./google-services.json"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",

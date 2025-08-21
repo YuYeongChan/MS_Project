@@ -103,7 +103,10 @@ export default function AdminReportListScreen() {
                         "user_id" : selectedReport.user_id,
                         "msg1": {
                             "title": "수리 완료 알림",
-                            "body": "신고하셨던 공공기물의 수리가 완료되었어요!"
+                            "body": "신고하셨던 공공기물의 수리가 완료되었어요!",
+                            "data": {
+                                "screen": "MyReportsScreen"
+                            }
                         },
                         "msg2":{
                             "title": "수리 완료 알림",

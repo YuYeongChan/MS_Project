@@ -704,8 +704,6 @@ async def send_notification_to_admin(title: str = Body(...), body: str = Body(..
                     "channelId": "default",
                     "priority": "high",
                 }
-                if data is not None:
-                    msg["data"] = data
                 messages.append(msg)
 
             resp = await client.post(EXPO_PUSH_URL, json=messages)
@@ -815,7 +813,7 @@ async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2
                     "to": t,
                     "title": msg2["title"],
                     "body": msg2["body"],
-                    "data": {},
+                    "data": msg2["data"],
                     "sound": "default",
                     "channelId": "default",
                     "priority": "high",
@@ -828,7 +826,7 @@ async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2
                 "to": t,
                 "title": msg1["title"],
                 "body": msg1["body"],
-                "data": {},
+                "data": msg1["data"],
                 "sound": "default",
                 "channelId": "default",
                 "priority": "high",

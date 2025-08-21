@@ -181,13 +181,43 @@ const PublicPropertyReportScreen = () => {
       const responseData = await res.json();
       if (res.ok) {
 
+        // data = {
+        //     "title": "신규 신고 등록 알림",
+        //     "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`,
+        //     "data": {
+        //       "screen": "AdminMainScreen",
+        //       "params": {
+        //         "initialRoute": "ReportList",   // 콜드 스타트용
+        //         "goToTab": "ReportList"         // 웜/포그라운드용
+        //       }
+        //     }
+        // }
+
+        // // 관리자에게 알림 보냄
+        // const res = api.postJSON("/notification.notify_admin", data);
+
         data = {
+
+          "user_id": userid,
+          "msg1": {
             "title": "신규 신고 등록 알림",
-            "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`
+            "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`,
+            "data": {
+              "screen": "AdminMainScreen",
+              "params": {
+                "initialRoute": "ReportList",   // 콜드 스타트용
+                "goToTab": "ReportList"         // 웜/포그라운드용
+              }
+            }
+          },
+          "msg2": {
+                "title": "신규 신고 등록 알림",
+                "body": "동네에 새로운 파손 공공기물이 발견되었습니다.",
+                "data": {}
+          }
         }
 
-        // 관리자에게 알림 보냄
-        const res = api.postJSON("/notification.notify_admin", data);
+        const res = api.postJSON("/notification.notify_reg", data);
 
         Alert.alert("신고 성공", responseData.result || "신고가 성공적으로 등록되었습니다.");
         setPhoto(null);

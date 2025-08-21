@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect } from 'react';
 import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,11 +17,14 @@ import MyInfoScreen from "./src/contents/MyInfoScreen";
 import DamageMapScreen from './src/contents/DamageMapScreen';
 import RankingScreen from './src/contents/RankingScreen';
 import NoticeBoardScreen from './src/contents/NoticeBoardScreen';
-
 import EditUserInfoScreen from './src/contents/EditUserInfoScreen';
 import MyReportsScreen from './src/contents/MyReportsScreen';
 import AdminLayout from './src/contents/Admin/AdminLayout';
+
+// ---- Notification ----
 import * as Notifications from 'expo-notifications';
+import { navigationRef } from './src/notification/rootNavigation';
+import { registerNotificationsRouting, unregisterNotificationsRouting } from './src/notification/router';
 
 // ---- auth bootstrap ----
 import { AuthProvider, useAuth } from './src/auth/authProvider';
@@ -55,7 +58,6 @@ Notifications.setNotificationHandler({
 //     }
 //   };
 // }, []);
-
 
 // for User
 function UserTabNavigator() {
@@ -166,6 +168,11 @@ export default function App() {
     'PretendardGOV-ExtraBold':    require('./fonts/PretendardGOV-ExtraBold.otf'),
   });
 
+  useEffect(() => {
+    registerNotificationsRouting();
+    return () => unregisterNotificationsRouting();
+  }, [])
+
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {
       await SplashScreen.hideAsync();
@@ -180,7 +187,7 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <AuthProvider>
         <AuthGate>
-          <NavigationContainer>
+          <NavigationContainer ref={navigationRef}>
             <RootNavigator />
           </NavigationContainer>
         </AuthGate>
