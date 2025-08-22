@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIn
 import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../utils/config';
 import { api } from '../../auth/api';
+import { Ionicons } from '@expo/vector-icons'; // 아이콘 사용
 
 const ImageCarousel = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -138,7 +139,12 @@ export default function AdminReportListScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>전체 신고 내역 관리</Text>
+            <View style={styles.headerRow}>
+                <Text style={styles.title}>전체 신고 내역 관리</Text>
+                <TouchableOpacity onPress={fetchAllReports} style={styles.refreshButton}>
+                    <Ionicons name="refresh" size={26} color="#436D9D" />
+                </TouchableOpacity>
+            </View>
 
             <ScrollView>
                 {reports.map(report => {
@@ -255,7 +261,9 @@ export default function AdminReportListScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, padding: 20, paddingHorizontal: 15, backgroundColor: '#f5f5f5', },
-    title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, },
+    headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+    title: { fontSize: 24, fontWeight: 'bold', flex: 1 },
+    refreshButton: { padding: 6, marginLeft: 8 },
     loadingIndicator: { flex: 1, justifyContent: 'center', alignItems: 'center', },
     card: { flexDirection: "row", backgroundColor: "#FFF", borderRadius: 12, padding: 12, marginBottom: 12, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 3, },
     image: { width: 80, height: 80, borderRadius: 8, backgroundColor: "#EEE", marginRight: 12, },
