@@ -24,7 +24,7 @@ export default function TopBar() {
           City Snap
         </Text>
 
-        <TouchableOpacity onPress={() => setOpen(true)}>
+        <TouchableOpacity onPress={() => setOpen(true)} style={{ padding: 5 }}>
           <Ionicons name="notifications-outline" size={30} color="#F9F9F9" />
         </TouchableOpacity>
       </View>
