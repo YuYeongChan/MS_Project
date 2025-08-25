@@ -38,7 +38,7 @@ export default function AdminTopBar() {
 
           {/* 로그아웃 버튼 */}
           <TouchableOpacity onPress={handleLogout} style={styles.iconButton}>
-            <Ionicons name="log-out-outline" size={35} color="#F9F9F9" />
+            <Ionicons name="log-out-outline" size={30} color="#F9F9F9" />
           </TouchableOpacity>
         </View>
       </View>

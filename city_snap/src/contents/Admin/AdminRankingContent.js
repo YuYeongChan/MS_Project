@@ -258,7 +258,7 @@ export default function AdminRankingContent() {
       <Modal
         visible={detailOpen}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setDetailOpen(false)}
       >
         <View style={s.modalOverlay}>

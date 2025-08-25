@@ -134,11 +134,11 @@ class RegistrationDAO:
             """
             cur.execute(sql_ms, {"p_report_id": report_id})
 
-            # 신고 성공 시 사용자 점수 +1 (동일 트랜잭션)
+            # 신고 성공 시 사용자 점수 +10 (동일 트랜잭션)
             # USERS 테이블이 실제 테이블인 것이 맞다고 하셨으므로 그대로 사용
             cur.execute("""
                 UPDATE USERS
-                SET SCORE = NVL(SCORE, 0) + 1
+                SET SCORE = NVL(SCORE, 0) + 10
                 WHERE USER_ID = :p_uid
             """, {"p_uid": user_id})
 
@@ -491,6 +491,26 @@ class RegistrationDAO:
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
+            sql = """
+                SELECT IS_NORMAL FROM REPORTS WHERE REPORT_ID = :report_id
+            """
+            cur.execute(sql, {"report_id": report_id})
+            row = cur.fetchone()
+            if row and row[0] == 0 and is_normal == 1:
+                sql = """
+                    UPDATE USERS 
+                    SET SCORE = NVL(SCORE, 0) - 10
+                    WHERE USER_ID = (SELECT USER_ID FROM REPORTS WHERE REPORT_ID = :report_id)
+                """
+                cur.execute(sql, {"report_id": report_id})
+            elif row and row[0] == 1 and is_normal == 0:
+                sql = """
+                    UPDATE USERS 
+                    SET SCORE = NVL(SCORE, 0) + 10
+                    WHERE USER_ID = (SELECT USER_ID FROM REPORTS WHERE REPORT_ID = :report_id)
+                """
+                cur.execute(sql, {"report_id": report_id})
+            
             sql = """
                 UPDATE REPORTS 
                 SET IS_NORMAL = :is_normal, REPAIR_STATUS = :repair_status

@@ -50,10 +50,9 @@ const AccountScreen = ({ navigation }) => {
 
       Alert.alert("로그인 성공", res.result || "로그인에 성공했습니다!");
     } catch (e) {
-      console.error("로그인 실패:", e);
       Alert.alert(
         "로그인 실패",
-        String(e?.message || "사용자 ID 또는 비밀번호가 올바르지 않습니다.")
+        "사용자 ID 또는 비밀번호가 올바르지 않습니다."
       );
     } finally {
       setIsLoading(false);
