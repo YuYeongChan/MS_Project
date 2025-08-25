@@ -181,39 +181,30 @@ const PublicPropertyReportScreen = () => {
       const responseData = await res.json();
       if (res.ok) {
 
-        // data = {
-        //     "title": "신규 신고 등록 알림",
-        //     "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`,
-        //     "data": {
-        //       "screen": "AdminMainScreen",
-        //       "params": {
-        //         "initialRoute": "ReportList",   // 콜드 스타트용
-        //         "goToTab": "ReportList"         // 웜/포그라운드용
-        //       }
-        //     }
-        // }
-
-        // // 관리자에게 알림 보냄
-        // const res = api.postJSON("/notification.notify_admin", data);
-
-        data = {
+        const data = {
 
           "user_id": userid,
           "msg1": {
-            "title": "신규 신고 등록 알림",
+            "title": "[신규 신고 등록 알림]",
             "body": `사용자 ${nickname}님이 새로운 파손 내용을 등록하셨습니다.`,
             "data": {
-              "screen": "AdminMainScreen",
+              "stack": "AdminMainScreen",
+              "screen": "ReportList",
               "params": {
-                "initialRoute": "ReportList",   // 콜드 스타트용
-                "goToTab": "ReportList"         // 웜/포그라운드용
+                "openReportId": responseData.report_id
               }
             }
           },
           "msg2": {
-                "title": "신규 신고 등록 알림",
-                "body": "동네에 새로운 파손 공공기물이 발견되었습니다.",
-                "data": {}
+            "title": "[신규 신고 등록 알림]",
+            "body": "동네에 새로운 파손 공공기물이 발견되었습니다.",
+            "data": {
+              "screen": "DamageMapScreen",
+              "params": {
+                "lat": location.lat,
+                "lng": location.lng
+              }
+            }
           }
         }
 

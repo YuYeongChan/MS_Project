@@ -1,10 +1,11 @@
 import React from 'react';
 import { appEvents, EVENTS } from '../../utils/eventBus'; // 경로 확인
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, Modal, Dimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { API_BASE_URL } from '../../utils/config';
 import { api } from '../../auth/api';
+import { useRoute } from '@react-navigation/native';
 
 const ImageCarousel = ({ images }) => {
     const [activeIndex, setActiveIndex] = useState(0);
@@ -39,6 +40,57 @@ const ImageCarousel = ({ images }) => {
 };
 
 export default function AdminReportListScreen() {
+
+    const route = useRoute();
+    const hasOpenedRef = useRef(false); // 중복 오픈 방지
+    const openReportId = route.params?.openReportId;
+
+    useEffect(() => {
+        if (!openReportId || hasOpenedRef.current) return;
+
+        // 1) 현재 리스트에서 먼저 찾아보고
+        const found = reports.find(r => String(r.id) === String(openReportId));
+        if (found) {
+            hasOpenedRef.current = true;
+            openDetailModal(found);
+            return;
+        }
+
+        // 2) 리스트에 없다면 단건 상세를 가져와 리스트에 추가 후 오픈
+        (async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/report_details/${openReportId}?ts=${Date.now()}`, {
+                headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+            });
+            if (!res.ok) return; // 실패면 조용히 무시(다음 focus에서 목록으로 보이게)
+            const detail = await res.json();
+
+            // 리스트 카드 형태에 맞게 변환(당신의 리스트 스키마에 맞춰 매핑)
+            const asRow = {
+                id: detail.report_id,
+                location: detail.location_description,
+                date: (detail.report_date || '').slice(0, 10),
+                user_id: detail.user_id,
+                is_normal: detail.is_normal ?? 0,
+                repair_status: detail.repair_status ?? 0,
+                photo_url: detail.photo_url || null,
+            };
+
+            setReports(prev => {
+                // 중복 방지
+                if (prev.some(r => String(r.id) === String(asRow.id))) return prev;
+                // 상단에 끼워넣기(날짜 구분 로직이 있다면 정렬/그룹은 필요시 조정)
+                return [asRow, ...prev];
+            });
+
+            hasOpenedRef.current = true;
+            openDetailModal({ id: asRow.id }); // openDetailModal에서 /report_details 재호출하므로 id만 넘겨도 OK(아래 참고)
+        } catch (e) {
+            // 실패 시엔 그냥 목록 그대로(다음 focus 때 갱신될 것)
+        }
+        })();
+    }, [openReportId, reports]);
+
     const [reports, setReports] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
@@ -47,13 +99,25 @@ export default function AdminReportListScreen() {
     const [damageStatusInModal, setDamageStatusInModal] = useState(null);
     const [repairStatusInModal, setRepairStatusInModal] = useState(null);
 
-    const fetchAllReports = () => {
+    const fetchAllReports = async () => {
         setLoading(true);
-        fetch(`${API_BASE_URL}/admin/all_reports`)
-            .then(res => res.ok ? res.json() : Promise.reject(res))
-            .then(data => setReports(data))
-            .catch(() => Alert.alert("오류", "신고 목록을 불러오는 데 실패했습니다."))
-            .finally(() => setLoading(false));
+        try {
+            const url = `${API_BASE_URL}/admin/all_reports?ts=${Date.now()}`; // ← 캐시버스터
+            const res = await fetch(url, {
+                headers: {
+                    'Cache-Control': 'no-cache',  // 캐시 방지 시도
+                    Pragma: 'no-cache',
+                },
+            });
+            if (!res.ok) throw new Error('bad response');
+
+            const data = await res.json();
+            setReports(data);
+        } catch (e) {
+            Alert.alert("오류", "신고 목록을 불러오는 데 실패했습니다.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     useFocusEffect(useCallback(() => { fetchAllReports(); }, []));
@@ -102,7 +166,7 @@ export default function AdminReportListScreen() {
                         
                         "user_id" : selectedReport.user_id,
                         "msg1": {
-                            "title": "수리 완료 알림",
+                            "title": "[수리 완료 알림]",
                             "body": "신고하셨던 공공기물의 수리가 완료되었어요!",
                             "data": {
                                 "screen": "MyReportsScreen"
@@ -110,7 +174,10 @@ export default function AdminReportListScreen() {
                         },
                         "msg2":{
                             "title": "[수리 완료 알림]",
-                            "body": "동네 공공기물의 수리가 완료되었어요!"
+                            "body": "동네 공공기물의 수리가 완료되었어요!",
+                            "data": {
+                                "screen": "DamageMapScreen",
+                            }
                         }
                     }
                     const res = await api.postJSON("/notification.notify_repair", data);

@@ -39,3 +39,5 @@ yarn-error.*
 # google service file for notification
 ainuri-9f91e-firebase-adminsdk-fbsvc-85cd7a9489.json
 google-services.json
+
+network_security_config.xml

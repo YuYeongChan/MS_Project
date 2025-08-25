@@ -24,7 +24,12 @@ import AdminLayout from './src/contents/Admin/AdminLayout';
 // ---- Notification ----
 import * as Notifications from 'expo-notifications';
 import { navigationRef } from './src/notification/rootNavigation';
-import { registerNotificationsRouting, unregisterNotificationsRouting } from './src/notification/router';
+import { 
+  registerNotificationsRouting, 
+  unregisterNotificationsRouting, 
+  captureInitialNotificationRoute, 
+  flushPendingRoute 
+} from './src/notification/router';
 
 // ---- auth bootstrap ----
 import { AuthProvider, useAuth } from './src/auth/authProvider';
@@ -37,27 +42,10 @@ const Tab = createBottomTabNavigator();
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,   // 포그라운드에서도 배너/알림 표시
-    shouldPlaySound: true,   // 사운드 재생
+    shouldPlaySound: false,
     shouldSetBadge: false,   // iOS 뱃지 카운트는 사용 안 함 (원하면 true)
   }),
 });
-
-// 알림 터치 시 특정 화면으로 이동 (구현 x)
-// const responseListener = useRef();
-
-// useEffect(() => {
-//   responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-//     const data = response.notification.request.content.data || {};
-//     // 예: data.route = 'NoticeDetail', data.id = 123 등
-//     // navigation.navigate(data.route, { id: data.id });
-//   });
-
-//   return () => {
-//     if (responseListener.current) {
-//       Notifications.removeNotificationSubscription(responseListener.current);
-//     }
-//   };
-// }, []);
 
 // for User
 function UserTabNavigator() {
@@ -169,9 +157,18 @@ export default function App() {
   });
 
   useEffect(() => {
+    // 1) 알림 라우팅 리스너 등록
     registerNotificationsRouting();
+    // 2) cold start로 알림에서 들어왔는지 미리 캡처
+    captureInitialNotificationRoute();
     return () => unregisterNotificationsRouting();
-  }, [])
+  }, []);
+
+  const onNavReady = useCallback(() => {
+    // NavigationContainer 가 준비되면 대기 중 라우트 실행
+    flushPendingRoute();
+  }, []);
+  
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {
@@ -187,7 +184,7 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <AuthProvider>
         <AuthGate>
-          <NavigationContainer ref={navigationRef}>
+          <NavigationContainer ref={navigationRef} onReady={onNavReady}>
             <RootNavigator />
           </NavigationContainer>
         </AuthGate>

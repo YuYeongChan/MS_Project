@@ -22,11 +22,15 @@ export default function AdminLayout() {
   // 웜/포그라운드: goToTab 파라미터가 바뀌면 해당 탭으로 이동
   useEffect(() => {
     const goTo = route?.params?.goToTab;
+    const openReportId = route?.params?.openReportId;
+
     if (goTo) {
-      // Tab.Navigator 안에서 탭 전환
-      navigation.navigate(goTo);
+      // 탭이 마운트된 다음 프레임에 실행
+      requestAnimationFrame(() => {
+        navigation.navigate(goTo, openReportId ? { openReportId } : undefined);
+      });
     }
-  }, [route?.params?.goToTab, navigation]);
+  }, [route?.params?.goToTab, route?.params?.openReportId, navigation])
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -39,8 +43,8 @@ export default function AdminLayout() {
       }
     });
 
-  return () => backHandler.remove();
-}, [navigation]);
+    return () => backHandler.remove();
+  }, [navigation]);
 
   return (
     <>

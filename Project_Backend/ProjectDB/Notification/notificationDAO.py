@@ -350,47 +350,7 @@ class NotificationDAO:
         finally:
             if cur:
                 SsyDBManager.closeConCur(con, cur)
-    def getAllExpoPushToken(self, exclude_user_id: Optional[str] = None) -> Tuple[List[str], List[str]]:
-        con, cur = None, None
-        try:
-            con, cur = SsyDBManager.makeConCur()
-            if exclude_user_id:
-                sql = """
-                    SELECT token, user_id
-                    FROM USERS
-                    WHERE token IS NOT NULL
-                    AND UPPER(TRIM(user_id)) <> UPPER(TRIM(:uid))
-                """
-                cur.execute(sql, {"uid": exclude_user_id})
-            else:
-                sql = """
-                    SELECT token, user_id
-                    FROM USERS
-                    WHERE token IS NOT NULL
-                """
-                cur.execute(sql)
 
-            tokens, user_ids = [], []
-            for tok, uid in cur:
-                tokens.append(tok)
-                user_ids.append(uid)
-            return tokens, user_ids
-
-        except Exception as e:
-            print(f"[getAllExpoPushToken] SQL 오류: {e}")
-            return [], []
-        finally:
-            if cur:
-                SsyDBManager.closeConCur(con, cur)
-
-    # ===== 추가: 헬퍼들 =====
-    def broadcast_all(self, content: str, sender: str, sent_at: Optional[datetime]=None) -> dict:
-        return self.insert_notification(content=content, sender=sender, recipient_code="USER_ALL", sent_at=sent_at)
-
-    def notify_user(self, content: str, sender: str, user_id_or_email: str, sent_at: Optional[datetime]=None) -> dict:
+    def insert_notification_user(self, content: str, sender: str, user_id_or_email: str, sent_at: Optional[datetime]=None) -> dict:
         rc = self._normalize_recipient_code(user_id_or_email)
-        return self.insert_notification(content=content, sender=sender, recipient_code=rc, sent_at=sent_at)
-
-    def notify_location(self, content: str, sender: str, location_code: str, sent_at: Optional[datetime]=None) -> dict:
-        rc = location_code if location_code.upper().startswith("LOCATION_") else f"LOCATION_{location_code.strip().upper()}"
         return self.insert_notification(content=content, sender=sender, recipient_code=rc, sent_at=sent_at)

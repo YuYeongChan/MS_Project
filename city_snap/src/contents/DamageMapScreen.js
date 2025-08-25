@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { WebView } from "react-native-webview";
 import { API_BASE_URL, googleMapsApiKey } from "../utils/config";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import jwt_decode from "jwt-decode";
 import { getTokens } from "../auth/authStorage";
 
@@ -17,7 +17,9 @@ export default function DamageMapScreen() {
   const [damageLocations, setDamageLocations] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userCenter, setUserCenter] = useState(null);
+  const [notifyLocation, setNotifyLocation] = useState(null);
   const navigation = useNavigation();
+  const route = useRoute();
 
   useEffect(() => {
     const loadUserLocationAndDamageData = async () => {
@@ -47,6 +49,13 @@ export default function DamageMapScreen() {
 
     loadUserLocationAndDamageData();
   }, []);
+
+  // 신고자를 제외한 나머지 사용자에게 가는 알림 터치 시
+  // 해당 건에 맞는 좌표를 기준으로 지도 열기
+  useEffect(() => {
+    if(route?.params)
+      setNotifyLocation({"lat": route?.params?.lat, "lng": route?.params?.lng});
+  }, [route?.params, navigation]);
 
   const geocodeAddress = async (address) => {
     const encoded = encodeURIComponent(address);
@@ -119,8 +128,15 @@ export default function DamageMapScreen() {
       })
     );
 
-    const centerLat = center?.lat || 37.5665;
-    const centerLng = center?.lng || 126.978;
+    let centerLat = center?.lat || 37.5665;
+    let centerLng = center?.lng || 126.978;
+    let preselect = false;
+
+    if(notifyLocation){
+      centerLat = notifyLocation.lat;
+      centerLng = notifyLocation.lng;
+      preselect = true;
+    }
 
     return `
       <!DOCTYPE html>
@@ -239,14 +255,42 @@ export default function DamageMapScreen() {
                           position: new google.maps.LatLng(location.lat, location.lng),
                           map: map
                       });
+
+                      marker.__meta = location;
+
                       marker.addListener('click', function(e) {
                           if (e.domEvent) e.domEvent.stopPropagation();
                           showInfoBox(location, marker);
                       });
                       markers.push(marker);
                   });
+
+                  tryPreselect();
               }
-              // ⭐ 콜백 전역 바인딩 (가장 중요)
+
+              function tryPreselect() {
+
+                if(!${preselect}) return;
+
+                // 좌표로 가장 가까운 마커 찾기 (lat/lng 기준)
+                if (${centerLat} != null && ${centerLng} != null) {
+                  var target = { lat: Number(${centerLat}), lng: Number(${centerLng}) };
+                  var best = null, bestD2 = Infinity;
+                  markers.forEach(m => {
+                    var p = m.getPosition();
+                    var dx = p.lat() - target.lat, dy = p.lng() - target.lng;
+                    var d2 = dx*dx + dy*dy;
+                    if (d2 < bestD2) { bestD2 = d2; best = m; }
+                  });
+                  if (best) {
+                    showInfoBox(best.__meta, best);
+                    map.panTo(best.getPosition());
+                    if (map.getZoom() < 16) map.setZoom(16);
+                  }
+                }
+              }
+
+              // 콜백 전역 바인딩 (가장 중요)
               window.initMap = initMap;
 
               function esc(str) { if (!str) return ""; return String(str).replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -292,7 +336,7 @@ export default function DamageMapScreen() {
                   currentMarker = marker;
               }
           </script>
-          <!-- ⭐ 구글 맵 스크립트는 함수 정의 이후에 로드 -->
+          <!-- 구글 맵 스크립트는 함수 정의 이후에 로드 -->
           <script async defer src="https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&language=ko&callback=initMap"></script>
       </body>
       </html>
@@ -330,7 +374,7 @@ export default function DamageMapScreen() {
       {damageLocations.length > 0 ? (
         <WebView
           originWhitelist={["*"]}
-          source={{ html: generateMapHtml(damageLocations, userCenter) }}
+          source={{ html: generateMapHtml(damageLocations, userCenter, notifyLocation) }}
           javaScriptEnabled={true}
           domStorageEnabled={true}
           style={styles.webView}

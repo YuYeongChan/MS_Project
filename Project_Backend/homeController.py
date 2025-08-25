@@ -248,7 +248,6 @@ async def registrationWrite(
         }
         background_tasks.add_task(notifyDAO.send_notification_to_local_task, **local_notification_data)
 
-
     except Exception as e:
         print("BG schedule error:", e)
 
@@ -753,7 +752,7 @@ async def send_notification_repair(
     
     # 1. 신고자에게 보낼 알림을 DB에 저장합니다.
     try:
-        notifyDAO.notify_user(
+        notifyDAO.insert_notification_user(
             content=f"{msg1.get('title','')}\n{msg1.get('body','')}",
             sender="system",
             user_id_or_email=user_id
@@ -793,7 +792,7 @@ async def send_notification_repair(
                 "to": reporter_token,
                 "title": msg1.get("title"),
                 "body": msg1.get("body"),
-                "data": {},
+                "data": msg1.get("data"),
                 "sound": "default",
                 "channelId": "default",
                 "priority": "high",
@@ -806,7 +805,7 @@ async def send_notification_repair(
                     "to": t,
                     "title": msg2.get("title"),
                     "body": msg2.get("body"),
-                    "data": {},
+                    "data": msg2.get("data"),
                     "sound": "default",
                     "channelId": "default",
                     "priority": "high",
@@ -837,8 +836,38 @@ async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2
     # 알림을 보낼 계정의 토큰 추출
     other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
 
-    # admin의 토큰만 추출
-    admin_tokens = notifyDAO.getAdminExpoPushToken()
+    # 관리자 계정의 토큰과 id를 추출
+    admin_info = notifyDAO.getAdminsWithTokens()
+    print("----------------------------------ok-------------------------------------")
+    if not admin_info:
+        raise HTTPException(status_code=400, detail="관리자 푸시 토큰 없음")
+
+    admin_ids  = [u for (u, _t) in admin_info]
+    admin_tokens = [t for (_u, t) in admin_info]
+
+    # 관리자에게 보낼 알림을 DB에 저장
+    try:
+        notifyDAO.insert_notifications_bulk(
+            content=f"{msg1.get('title', '')}\n{msg1.get('body', '')}",
+            sender="system",
+            recipients=admin_ids
+        )
+    except Exception as e:
+        print(f"[notify_admin] DB insert 실패: {e}")
+
+    # 주변 사용자 목록을 가져와서 알림을 DB에 저장
+    other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
+    recipients_for_db = [uid for uid, t in zip(user_ids, other_tokens) if uid and uid != user_id and t]
+    
+    try:
+        if recipients_for_db:
+            notifyDAO.insert_notifications_bulk(
+                content=f"{msg2.get('title','')}\n{msg2.get('body','')}",
+                sender="system",
+                recipients=recipients_for_db
+            )
+    except Exception as e:
+        print(f"[notify_repair] 주변 사용자 DB insert 실패: {e}")
 
     tickets = []
     errors = []
@@ -899,70 +928,14 @@ async def send_notification_reg(user_id: str = Body(), msg1: dict = Body(), msg2
 def test():
     h = {"Access-Control-Allow-Origin": "*"}
 
-    other_token, user_ids = notifyDAO.getLocalExpoPushToken()
+    admin_info = notifyDAO.getAdminsWithTokens()
+
+    admin_ids  = [u for (u, _t) in admin_info]
+    admin_tokens = [t for (_u, t) in admin_info]
+
     body = {
-        "other_token": other_token,
-        "user_ids": user_ids,
+        "admin_ids": admin_ids,
+        "admin_tokens": admin_tokens,
     }
 
     return JSONResponse(body, headers=h)
-
-# 단건 생성 (USER_ALL / NAME_xxx / LOCATION_xxx 또는 user_id/email 입력)
-@app.post("/notifications.create")
-def notifications_create(payload: NotificationCreateIn):
-    return notifyDAO.insert_notification(
-        content=payload.content,
-        sender=payload.sender,
-        recipient_code=payload.recipient_code,
-        sent_at=None,  # 항상 None -> DB가 현재시각 자동 입력
-    )
-
-# 여러 대상 일괄 생성
-@app.post("/notifications.bulk")
-def notifications_bulk(payload: NotificationBulkIn):
-    return notifyDAO.insert_notifications_bulk(
-        content=payload.content,
-        sender=payload.sender,
-        recipients=payload.recipients,
-        sent_at=None,
-    )
-
-# 전 사용자 브로드캐스트
-@app.post("/notifications.broadcast_all")
-def notifications_broadcast_all(
-    content: str = Body(...),
-    sender:  str = Body(...),
-):
-    return notifyDAO.broadcast_all(
-        content=content,
-        sender=sender,
-        sent_at=None,
-    )
-
-# 특정 사용자(아이디/이메일)
-@app.post("/notifications.notify_user")
-def notifications_notify_user(
-    content: str = Body(...),
-    sender:  str = Body(...),
-    user_id_or_email: str = Body(...),
-):
-    return notifyDAO.notify_user(
-        content=content,
-        sender=sender,
-        user_id_or_email=user_id_or_email,
-        sent_at=None,
-    )
-
-# 특정 지역(LOCATION_코드 또는 원시값)
-@app.post("/notifications.notify_location")
-def notifications_notify_location(
-    content: str = Body(...),
-    sender:  str = Body(...),
-    location_code: str = Body(...),  # "SEOUL" / "강남구" / "LOCATION_SEOUL"
-):
-    return notifyDAO.notify_location(
-        content=content,
-        sender=sender,
-        location_code=location_code,
-        sent_at=None,
-    )

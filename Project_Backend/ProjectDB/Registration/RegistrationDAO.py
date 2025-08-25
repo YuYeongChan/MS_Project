@@ -509,7 +509,7 @@ class RegistrationDAO:
             if cur and con: SsyDBManager.closeConCur(con, cur)
 
     # 4. 신고 상태 업데이트 (ai_status만 변경)
-    async def updateAIStatus(self, report_id: int, status: str):
+    def updateAIStatus(self, report_id: int, status: str):
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
@@ -518,41 +518,6 @@ class RegistrationDAO:
                 {"st": status, "rid": report_id}
             )
             con.commit()
-
-            # 신고한 사용자 아이디 추출
-            cur.execute(
-                "SELECT user_id FROM Reports WHERE report_id=:rid",
-                {"rid": report_id}
-            )
-            con.commit()
-            user_id = cur.fetchone()[0]
-
-            # 파손일 경우 사용자에게 알림 전송
-
-            # 알림을 보낼 계정의 토큰 추출
-            other_tokens, user_ids = notifyDAO.getLocalExpoPushToken()
-
-            # 100개씩 나눠서 알림 전송
-            async with httpx.AsyncClient(timeout=15) as client:
-                
-                messages = []
-                for idx, t in enumerate(other_tokens):
-                    if user_ids[idx] != user_id:
-                        msg = {
-                            "to": t,
-                            "title": "신규 신고 등록 알림",
-                            "body": "동네에 새로운 파손 공공기물이 발견되었습니다.",
-                            "data": {},
-                            "sound": "default",
-                            "channelId": "default",
-                            "priority": "high",
-                        }
-
-                        messages.append(msg)
-
-                resp = await client.post(EXPO_PUSH_URL, json=messages)
-                resp.raise_for_status()
-                out = resp.json()
 
         except Exception as e:
             if con: con.rollback()
