@@ -552,7 +552,7 @@ class RegistrationDAO:
         con, cur = None, None
         try:
             con, cur = SsyDBManager.makeConCur()
-            
+           
             cur.execute("""
                 UPDATE Reports
                    SET ai_status = :st,
@@ -572,7 +572,9 @@ class RegistrationDAO:
                 cur.execute("""
                     UPDATE Reports SET is_normal=1 WHERE report_id=:rid
                 """, {"rid": report_id})
-            
+                cur.execute("""
+                    UPDATE USERS SET SCORE = NVL(SCORE, 0) - 10 WHERE USER_ID = (SELECT USER_ID FROM REPORTS WHERE REPORT_ID = :rid)
+                """,{"rid": report_id})
             con.commit()
         except Exception as e:
             if con: con.rollback()

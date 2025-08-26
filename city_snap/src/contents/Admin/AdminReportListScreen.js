@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     imagePreview: { width: '100%', height: '85%', borderRadius: 8, backgroundColor: '#000', },
     imagePreviewClose: { position: 'absolute', top: 36, left: 18, zIndex: 20, backgroundColor: 'rgba(0,0,0,0.4)', padding: 6, borderRadius: 20, },
     // filter container styles
-    filterContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', borderWidth: 1, borderRadius: 8, padding: 6, marginRight: 130, marginBottom: 10 },
+    filterContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f5f5f5', borderWidth: 1, borderRadius: 8, padding: 6, marginBottom: 5, marginRight: '25%' },
     filterButton: { flexDirection: 'row', alignItems: 'center', marginRight: 16, paddingHorizontal: 6, paddingVertical: 4, borderRadius: 8 },
     filterButtonActive: { backgroundColor: '#e6f0ff', borderRadius: 8 },
     filterCheckbox: { width: 18, height: 18, borderWidth: 1, borderColor: '#ccc', borderRadius: 4, marginRight: 6, justifyContent: 'center', alignItems: 'center' },
