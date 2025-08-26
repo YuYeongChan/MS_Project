@@ -54,12 +54,20 @@ export default function AdminReportListScreen() {
 
     const route = useRoute();
     const hasOpenedRef = useRef(false); // 중복 오픈 방지
+    const prevIdRef = useRef(null);
     const openReportId = route.params?.openReportId;
 
     useEffect(() => {
-        if (!openReportId || hasOpenedRef.current) return;
 
-        // 1) 현재 리스트에서 먼저 찾아보고
+        // 새 알림으로 다른 openReportId가 오면 게이트 리셋
+        if (openReportId && prevIdRef.current !== String(openReportId)) {
+            prevIdRef.current = String(openReportId);
+            hasOpenedRef.current = false;
+        }
+
+        if (!openReportId || !reports?.length || hasOpenedRef.current) return;
+
+        // 현재 리스트에서 먼저 찾아보고
         const found = reports.find(r => String(r.id) === String(openReportId));
         if (found) {
             hasOpenedRef.current = true;
@@ -67,38 +75,38 @@ export default function AdminReportListScreen() {
             return;
         }
 
-        // 2) 리스트에 없다면 단건 상세를 가져와 리스트에 추가 후 오픈
+        // 리스트에 없다면 단건 상세를 가져와 리스트에 추가 후 오픈
         (async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/report_details/${openReportId}?ts=${Date.now()}`, {
-                headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-            });
-            if (!res.ok) return; // 실패면 조용히 무시(다음 focus에서 목록으로 보이게)
-            const detail = await res.json();
+            try {
+                const res = await fetch(`${API_BASE_URL}/report_details/${openReportId}?ts=${Date.now()}`, {
+                    headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+                });
+                if (!res.ok) return; // 실패면 조용히 무시(다음 focus에서 목록으로 보이게)
+                const detail = await res.json();
 
-            // 리스트 카드 형태에 맞게 변환(당신의 리스트 스키마에 맞춰 매핑)
-            const asRow = {
-                id: detail.report_id,
-                location: detail.location_description,
-                date: (detail.report_date || '').slice(0, 10),
-                user_id: detail.user_id,
-                is_normal: detail.is_normal ?? 0,
-                repair_status: detail.repair_status ?? 0,
-                photo_url: detail.photo_url || null,
-            };
+                // 리스트 카드 형태에 맞게 변환(당신의 리스트 스키마에 맞춰 매핑)
+                const asRow = {
+                    id: detail.report_id,
+                    location: detail.location_description,
+                    date: (detail.report_date || '').slice(0, 10),
+                    user_id: detail.user_id,
+                    is_normal: detail.is_normal ?? 0,
+                    repair_status: detail.repair_status ?? 0,
+                    photo_url: detail.photo_url || null,
+                };
 
-            setReports(prev => {
-                // 중복 방지
-                if (prev.some(r => String(r.id) === String(asRow.id))) return prev;
-                // 상단에 끼워넣기(날짜 구분 로직이 있다면 정렬/그룹은 필요시 조정)
-                return [asRow, ...prev];
-            });
+                setReports(prev => {
+                    // 중복 방지
+                    if (prev.some(r => String(r.id) === String(asRow.id))) return prev;
+                    // 상단에 끼워넣기(날짜 구분 로직이 있다면 정렬/그룹은 필요시 조정)
+                    return [asRow, ...prev];
+                });
 
-            hasOpenedRef.current = true;
-            openDetailModal({ id: asRow.id }); // openDetailModal에서 /report_details 재호출하므로 id만 넘겨도 OK(아래 참고)
-        } catch (e) {
-            // 실패 시엔 그냥 목록 그대로(다음 focus 때 갱신될 것)
-        }
+                hasOpenedRef.current = true;
+                openDetailModal({ id: asRow.id }); // openDetailModal에서 /report_details 재호출하므로 id만 넘겨도 OK(아래 참고)
+            } catch (e) {
+                // 실패 시엔 그냥 목록 그대로(다음 focus 때 갱신될 것)
+            }
         })();
     }, [openReportId, reports]);
 
@@ -157,6 +165,7 @@ export default function AdminReportListScreen() {
     }, [filterDamageOnly, filterRepairPendingOnly]);
 
     const openDetailModal = (report) => {
+        setModalVisible(false); // 기존 모달 닫기
         setModalVisible(true);
         setDetailLoading(true);
         fetch(`${API_BASE_URL}/report_details/${report.id}`)
