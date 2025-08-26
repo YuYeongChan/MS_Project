@@ -102,6 +102,9 @@ class NotificationDAO:
             con, cur = SsyDBManager.makeConCur()
             params = {"expoPushToken": expoPushToken, "user_id": user_id}
 
+            sql = f"UPDATE Users SET TOKEN = NULL WHERE user_id != :user_id AND TOKEN = :expoPushToken"
+            cur.execute(sql, params)
+
             sql = f"UPDATE Users SET TOKEN = :expoPushToken WHERE user_id = :user_id"
             cur.execute(sql, params)
             con.commit()
