@@ -29,8 +29,9 @@ ms_project/
 - [최종 발표 PPT 보기](발표%20자료/Ainuri_최종발표_제출용.pptx)
 
 ## ⚙️ 기술 스택
-- **프론트엔드**: React Native, Expo  
-- **백엔드**: FastAPI, OracleDB, Azure ML/ACI  
+- **프론트엔드**: React Native, Android Studio  
+- **백엔드**: Python, FastAPI, Node.js
 - **AI 모델**: Mask R-CNN, SAM, BLIP-2, Whisper  
-- **클라우드/배포**: Microsoft Azure, Docker, ACR/ACI  
-- **기타**: Python, PyTorch, Node.js, MongoDB, VSCode  
+- **클라우드/배포**: Microsoft Azure AI, Azure Container, Docker, ACR/ACI
+- **Database**: OracleDB
+
